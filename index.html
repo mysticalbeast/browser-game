@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tibia Idle Clicker - Local</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+  <div id="game">
+    <aside id="leftPanel">
+      <div class="menuGrid">
+        <button class="menuBtn" id="weaponsBtn">⚔<br>Weapons</button>
+        <button class="menuBtn" id="travelBtn">🗺<br>Travel</button>
+        <button class="menuBtn" id="skillsBtn">⚡<br>Skills</button>
+        <button class="menuBtn" id="craftingBtn">⚒<br>Crafting</button>
+        <button class="menuBtn" id="researchBtn">📖<br>Research</button>
+        <button class="menuBtn" id="scoreBtn">🏆<br>Leaderboards</button>
+        <button class="menuBtn" id="rewardsBtn">🎁<br>Rewards</button>
+        <button class="menuBtn" id="blacksmithBtn">🛠<br>Blacksmith</button>
+        <button class="menuBtn" id="depotBtn">📦<br>Depot</button>
+		<button class="menuBtn" id="starforgeBtn">⭐<br>Starforge</button>
+		<button id="fishingBtn" class="menuBtn">🎣<br>Fishing</button>
+		<button id="skinsBtn" class="menuBtn">🎨<br>Skins</button>
+        <button class="menuBtn" id="statsBtn">📊<br>Stats</button>
+        <button class="menuBtn" id="rebirthBtn">🔁<br>Rebirth</button>
+        <button class="menuBtn" id="rebirthShopBtn">🪙<br>Rebirth Shop</button>
+        <button class="menuBtn" id="settingsBtn">⚙️<br>Settings</button>
+        <button class="menuBtn" id="testingBtn">🧪<br>Testing</button>
+      </div>
+
+      <div id="charBox">
+        <b class="goldTitle">CHARACTER</b><br>
+        <b id="playerName">LocalHero</b><br>
+
+        Level <span id="levelText" class="rightWhite">1</span><br>
+        EXP <span id="expText" class="rightWhite">0 / 50</span>
+        <div class="bar"><div class="barFill" id="expBar"></div></div>
+
+        Gold <span id="goldText" class="rightWhite">0</span><br>
+		Rebirth Coins <span class="rightWhite" id="rebirthCoinsText">0</span><br>
+
+		Stars <span id="starsText" class="rightWhite">0</span><br>
+
+		Location <span id="zoneText" class="rightBlue">Rookgaard Sewers</span>
+
+        <hr>
+
+        <b class="goldTitle">WEAPON</b><br>
+        <div id="weaponBox">
+          <img id="weaponImg" src="assets/weapons/sword.gif" alt="Weapon">
+          <div>
+            <div id="weaponName">Sword</div>
+            <div id="damageText">5-10 dmg</div>
+          </div>
+        </div>
+
+        <hr>
+
+        <b class="goldTitle">COOLDOWNS</b><br>
+        <div id="leftSpellBox">
+          <div class="leftSpellLine muted">No cooldowns active</div>
+        </div>
+
+        <div id="automationBox"></div>
+      </div>
+
+      <button class="menuBtn" id="logoutBtn">Logout</button>
+    </aside>
+
+    <main id="center">
+      <section id="arena">
+        <div id="spawnInfo">
+          <div id="spawnInfoTitle">Possible Spawns</div>
+          <div id="spawnInfoList"></div>
+        </div>
+
+        <div id="filterNotifications"></div>
+      </section>
+    </main>
+
+    <aside id="rightPanel">
+      <div class="panelTitle">⚔ Equipment</div>
+      <div class="equipmentGrid" id="equipmentGrid"></div>
+
+      <div class="panelTitle backpackTitle">🎒 Backpack</div>
+      <div class="backpackGrid" id="backpack"></div>
+    </aside>
+  </div>
+
+  <div id="weaponsPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Weapons</div>
+    </div>
+    <div id="weaponList"></div>
+  </div>
+
+  <div id="travelPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Travel</div>
+    </div>
+    <div id="zoneList"></div>
+  </div>
+
+  <div id="upgradePanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Skills</div>
+    </div>
+    <div id="skillTreeContent"></div>
+  </div>
+
+  <div id="craftingPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Crafting</div>
+    </div>
+    <div id="materialList"></div>
+    <hr>
+    <div id="potionList"></div>
+  </div>
+
+  <div id="researchPanel" class="panel uiPanel">
+    <div id="researchContent"></div>
+  </div>
+
+<div id="skinsPanel" class="panel" style="display:none;"></div>
+
+  <div id="rewardsPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Rewards</div>
+    </div>
+    <div id="rewardsContent"></div>
+  </div>
+
+  <div id="statsPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Stats</div>
+    </div>
+    <div id="statsContent"></div>
+  </div>
+
+<div id="starforgePanel" class="panel uiPanel">
+  <div class="uiPanelHeader">
+    <div class="uiPanelTitle">Starforge</div>
+  </div>
+  <div id="starforgeContent"></div>
+</div>
+
+<div id="fishingPanel" class="panel" style="display:none;"></div>
+
+  <div id="scorePanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Leaderboard</div>
+    </div>
+    <div id="scoreContent"></div>
+  </div>
+
+  <div id="rebirthPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Rebirth</div>
+    </div>
+    <div id="rebirthMenuContent"></div>
+  </div>
+
+  <div id="rebirthShopPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Rebirth Shop</div>
+    </div>
+    <div id="rebirthShopContent"></div>
+  </div>
+
+  <div id="blacksmithPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Blacksmith</div>
+    </div>
+    <div id="blacksmithContent"></div>
+  </div>
+
+  <div id="settingsPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Settings</div>
+    </div>
+    <div id="settingsContent"></div>
+  </div>
+
+  <div id="depotPanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Depot</div>
+    </div>
+
+  <div class="depotTabs" id="depotTabs"></div>
+
+    <div id="depotGrid"></div>
+  </div>
+
+  <div id="testingPanel" class="panel uiPanel testingPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Testing</div>
+    </div>
+
+    <p class="testingDescription">Developer shortcuts for balancing.</p>
+    <button class="upgradeBtn" id="addGoldBtn">+1,000 Gold</button>
+    <button class="upgradeBtn" id="removeGoldBtn">-1,000 Gold</button>
+    <button class="upgradeBtn" id="addLevelBtn">+1 Level</button>
+    <button class="upgradeBtn" id="removeLevelBtn">-1 Level</button>
+    <button class="upgradeBtn dangerText" id="resetSaveBtn">Reset Save</button>
+  </div>
+
+  <div id="skillTooltip"></div>
+  <div id="itemTooltip"></div>
+
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+
+<script src="js/items.js"></script>
+<script src="js/zones.js"></script>
+<script src="js/randomEvents.js"></script>
+<script src="js/fishing.js"></script>
+
+<script src="js/weapons.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/skins.js"></script>
+<script src="js/monsters.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/spells.js"></script>
+
+<script src="js/ui.js"></script>
+<script src="js/save.js"></script>
+<script src="js/testing.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
