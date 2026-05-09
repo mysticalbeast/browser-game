@@ -44,6 +44,8 @@ async function authRequest(endpoint) {
 
       document.getElementById("authScreen").style.display = "none";
 	  window.gamePausedForAuth = false;
+	  sendOnlineHeartbeat?.();
+	  updateOnlinePlayersUI?.();
 	  setCloudSaveStatus?.("Ready", "saved");
 
       updateUI?.();
@@ -129,6 +131,8 @@ if (savedUserRaw) {
   setDisplayedPlayerName(savedUser.username);
 
   window.gamePausedForAuth = false;
+  sendOnlineHeartbeat?.();
+  updateOnlinePlayersUI?.();
   setCloudSaveStatus?.("Ready", "saved");
 } else {
   document.getElementById("authScreen").style.display = "flex";

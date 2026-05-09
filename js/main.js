@@ -692,7 +692,12 @@ function initGame() {
     sendOnlineHeartbeat?.();
   }, 30000);
 
+  setInterval(() => {
+    updateOnlinePlayersUI?.();
+  }, 10000);
+
   sendOnlineHeartbeat?.();
+  updateOnlinePlayersUI?.();
 }
 
 initGame();
