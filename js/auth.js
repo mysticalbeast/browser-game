@@ -57,6 +57,22 @@ async function authRequest(endpoint) {
   }
 }
 
+async function sendOnlineHeartbeat() {
+  const token = getAuthToken?.();
+  if (!token || window.gamePausedForAuth) return;
+
+  try {
+    await fetch(`${API_URL}/online/heartbeat`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+  } catch (error) {
+    console.warn("Online heartbeat failed:", error);
+  }
+}
+
 async function loadCloudSaveAfterLogin(userId) {
   try {
     const response = await fetch(`${API_URL}/save/${userId}`, {

@@ -686,6 +686,13 @@ function initGame() {
       renderScorePanel?.();
     }
   }, 5000);
+
+  setInterval(() => {
+    if (window.gamePausedForAuth) return;
+    sendOnlineHeartbeat?.();
+  }, 30000);
+
+  sendOnlineHeartbeat?.();
 }
 
 initGame();
