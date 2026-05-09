@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000";
+const API_URL = "https://dashboard.render.com/web/srv-d7vlp8jeo5us73es5fi0"
 
 window.gamePausedForAuth = true;
 

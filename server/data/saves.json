@@ -1605,8 +1605,8 @@
   "2f0d6431-b0dd-4e08-8ab5-40cde41873cd": {
     "save": {
       "level": 10,
-      "exp": 55,
-      "gold": 1323,
+      "exp": 61,
+      "gold": 1325,
       "unlockedNodes": [
         "center",
         "minotaur_category",
@@ -1614,7 +1614,7 @@
       ],
       "monsterResearch": {
         "Rat": {
-          "kills": 549,
+          "kills": 550,
           "unlocked": []
         },
         "Cave Rat": {
@@ -1629,12 +1629,12 @@
       "observatory": {
         "active": false,
         "closesAt": 0,
-        "nextCheckAt": 1778343111898
+        "nextCheckAt": 1778343291893
       },
       "starSystem": {
-        "activeZoneId": 9,
-        "nextZoneSwapAt": 1778343119888,
-        "nextSpawnCheckAt": 1778343112886
+        "activeZoneId": 7,
+        "nextZoneSwapAt": 1778344071888,
+        "nextSpawnCheckAt": 1778343258888
       },
       "starUpgrades": {
         "starfall": 0,
@@ -1872,6 +1872,16 @@
       },
       "activeLogFilter": "all",
       "logMessages": [
+        {
+          "text": "🪙 Rat killed. +2 gold, +6 exp.",
+          "type": "combat",
+          "time": 1778343208881
+        },
+        {
+          "text": "✨ Stars are now falling in Meriana Gargoyle Cave!",
+          "type": "system",
+          "time": 1778343171889
+        },
         {
           "text": "🪙 Rat killed. +5 gold, +6 exp.",
           "type": "combat",
@@ -2461,16 +2471,6 @@
           "text": "🪙 Cave Rat killed. +2 gold, +8 exp.",
           "type": "combat",
           "time": 1778342385886
-        },
-        {
-          "text": "🪙 Rat killed. +4 gold, +8 exp.",
-          "type": "combat",
-          "time": 1778342382251
-        },
-        {
-          "text": "🪙 Rat killed. +5 gold, +6 exp.",
-          "type": "combat",
-          "time": 1778342378613
         }
       ],
       "zoneId": 1,
@@ -2545,9 +2545,9 @@
       "activeSkillTree": "summons",
       "stats": {
         "sessionStartedAt": 1778341319734,
-        "goldEarned": 1323,
-        "expEarned": 2261,
-        "monstersKilled": 302,
+        "goldEarned": 1325,
+        "expEarned": 2267,
+        "monstersKilled": 303,
         "bossesKilled": 0,
         "ubersKilled": 0,
         "gearFound": 0
@@ -2567,8 +2567,8 @@
       "fishing": {
         "fish": 2,
         "rodOwned": true,
-        "lastAttemptAt": 1778343051898,
-        "nextAttemptAt": 1778343111898,
+        "lastAttemptAt": 1778343231893,
+        "nextAttemptAt": 1778343291893,
         "upgrades": {
           "quickCast": 0,
           "luckyHook": 0,
@@ -2627,7 +2627,7 @@
           }
         }
       },
-      "lastSeenAt": 1778343105897,
+      "lastSeenAt": 1778343255888,
       "automationToggles": {
         "autoBuy": true,
         "autoTravel": true,
@@ -2636,19 +2636,19 @@
       "researchBreakthrough": {
         "active": false,
         "closesAt": 0,
-        "nextCheckAt": 1778343111898
+        "nextCheckAt": 1778343291893
       },
       "siegeEvent": {
         "active": false,
         "endsAt": 0,
-        "nextCheckAt": 1778343111898,
+        "nextCheckAt": 1778343291893,
         "nextSpawnAt": 0,
         "wallHp": 0,
         "wallMaxHp": 0,
         "kills": 0,
         "monsters": []
       },
-      "summonTargetId": "76538a59-dfae-4645-a2bc-45ec0dcc70a9",
+      "summonTargetId": "501b16ee-03a9-4b49-8ca6-5ec1981decad",
       "leaderboardSort": "level",
       "activeFishingTab": "rod",
       "loadouts": {
@@ -2694,6 +2694,6 @@
         ]
       }
     },
-    "updatedAt": 1778343111900
+    "updatedAt": 1778343257902
   }
 }
