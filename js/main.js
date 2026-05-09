@@ -635,6 +635,7 @@ function initGame() {
   initBackpack();
   renderBackpack?.();
   bindEvents();
+  setupOfflineGainTracking();
   initSummonVisual();
   updateUI();
 

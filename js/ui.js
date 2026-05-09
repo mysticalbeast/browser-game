@@ -888,6 +888,109 @@ function buyDracoWeaponScaling() {
   queueSaveGame();
 }
 
+function renderOfflinePopup() {
+  const summary = state.offlineSummary;
+  if (!summary) return;
+
+  const existing = document.getElementById("offlinePopupOverlay");
+  if (existing) existing.remove();
+
+  const essenceRows = Object.entries(summary.essenceGains || {})
+    .filter(([, amount]) => amount > 0)
+    .map(([key, amount]) => `
+      <div class="offlineRewardRow">
+        <span>${formatMaterialName(key)}</span>
+        <b>+${fmt(amount)}</b>
+      </div>
+    `).join("");
+
+  const salvageRows = Object.entries(summary.salvageGains || {})
+    .filter(([, amount]) => amount > 0)
+    .map(([key, amount]) => `
+      <div class="offlineRewardRow">
+        <span>${formatMaterialName(key)}</span>
+        <b>+${fmt(amount)}</b>
+      </div>
+    `).join("");
+
+  const overlay = document.createElement("div");
+  overlay.id = "offlinePopupOverlay";
+
+  overlay.innerHTML = `
+    <div id="offlinePopupBox">
+      <div class="offlinePopupTitle">🌙 Offline Gains</div>
+
+      <div class="offlinePopupSub">
+        You were away for ${formatOfflineDuration(summary.minutes)}.
+      </div>
+
+      <div class="offlineRewardGrid">
+        <div class="offlineRewardRow">
+          <span>Experience</span>
+          <b>+${fmt(summary.totalExp)}</b>
+        </div>
+
+        <div class="offlineRewardRow">
+          <span>Gold</span>
+          <b>+${fmt(summary.totalGold)}</b>
+        </div>
+
+        <div class="offlineRewardRow">
+          <span>Levels</span>
+          <b>+${fmt(summary.gainedLevels || 0)}</b>
+        </div>
+
+        <div class="offlineRewardRow">
+          <span>Equipment Drops</span>
+          <b>+${fmt(summary.equipmentDrops || 0)}</b>
+        </div>
+
+        <div class="offlineRewardRow">
+          <span>Whetstones</span>
+          <b>+${fmt(summary.whetstones || 0)}</b>
+        </div>
+
+        ${essenceRows ? `
+          <div class="offlineRewardSectionTitle">Essences</div>
+          ${essenceRows}
+        ` : ""}
+
+        ${salvageRows ? `
+          <div class="offlineRewardSectionTitle">Salvage Materials</div>
+          ${salvageRows}
+        ` : ""}
+      </div>
+
+      <button id="offlinePopupCloseBtn">Claim</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("offlinePopupCloseBtn").onclick = () => {
+    state.offlineSummary = null;
+    overlay.remove();
+    saveGame();
+  };
+}
+
+function formatOfflineDuration(minutes) {
+  if (minutes < 60) {
+    return `${Math.floor(minutes)} minute${Math.floor(minutes) === 1 ? "" : "s"}`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.floor(minutes % 60);
+
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+function formatMaterialName(key) {
+  return String(key)
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, char => char.toUpperCase());
+}
+
 function renderWeaponStarTab() {
   const container = document.getElementById("starforgeTabContent");
   if (!container) return;

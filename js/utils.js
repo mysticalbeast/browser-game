@@ -187,6 +187,54 @@ function getTotalEquipmentStat(statKey) {
   return Math.floor(total);
 }
 
+function setupOfflineGainTracking() {
+  function markAway() {
+    if (window.gamePausedForAuth) return;
+    if (window.isAwayForOffline) return;
+
+    window.isAwayForOffline = true;
+    state.lastSeenAt = Date.now();
+
+    const save = getSerializableSave();
+    localStorage.setItem(getCurrentSaveKey(), JSON.stringify(save));
+
+    if (pendingCloudSave) {
+      uploadCloudSave(pendingCloudSave);
+      pendingCloudSave = null;
+    }
+  }
+
+  function returnFromAway() {
+    if (!window.isAwayForOffline) return;
+
+    window.isAwayForOffline = false;
+    window.offlineGainProcessing = true;
+
+    calculateOfflineGains();
+    renderOfflinePopup?.();
+    updateUI?.();
+
+    window.offlineGainProcessing = false;
+
+    saveGame();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      markAway();
+    } else {
+      returnFromAway();
+    }
+  });
+
+  window.addEventListener("blur", markAway);
+  window.addEventListener("focus", returnFromAway);
+
+  window.addEventListener("beforeunload", () => {
+    markAway();
+  });
+}
+
 function calculateOfflineGains() {
   if (!state.lastSeenAt) {
     state.lastSeenAt = Date.now();
@@ -200,7 +248,9 @@ function calculateOfflineGains() {
   const cappedMs = Math.min(elapsedMs, maxOfflineMs);
 
   const minutes = cappedMs / 60000;
-  if (minutes < 1) return;
+
+const minOfflineMs = 10 * 1000;
+if (cappedMs < minOfflineMs) return;
 
   const zone = currentZone();
 

@@ -41,10 +41,15 @@ function getCurrentSaveKey() {
   return SAVE_KEY;
 }
 
+window.isAwayForOffline = false;
+window.offlineGainProcessing = false;
+
 function saveGame() {
   if (window.isResettingSave) return;
 
-  state.lastSeenAt = Date.now();
+  if (!window.isAwayForOffline && !window.offlineGainProcessing) {
+    state.lastSeenAt = Date.now();
+  }
 
   const save = getSerializableSave();
 
