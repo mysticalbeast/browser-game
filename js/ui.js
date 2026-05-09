@@ -888,90 +888,197 @@ function buyDracoWeaponScaling() {
   queueSaveGame();
 }
 
+function claimOfflineRewards() {
+  const data = state.offlineSummary;
+
+  if (!data || data.claimed) {
+    return;
+  }
+
+  data.claimed = true;
+
+  const startLevel = state.level;
+
+  state.gold += data.totalGold || 0;
+  state.exp += data.totalExp || 0;
+
+  Object.keys(data.essenceGains || {}).forEach(key => {
+    state.materials[key] = (state.materials[key] || 0) + (data.essenceGains[key] || 0);
+  });
+
+  Object.keys(data.salvageGains || {}).forEach(key => {
+    state.salvageMaterials[key] = (state.salvageMaterials[key] || 0) + (data.salvageGains[key] || 0);
+  });
+
+  state.materials.whetstones =
+    (state.materials.whetstones || 0) + (data.whetstones || 0);
+
+  checkLevelUp();
+
+  data.gainedLevels = state.level - startLevel;
+
+  state.offlineSummary = null;
+
+  updateUI?.();
+  renderBackpack?.();
+  renderEquipmentSlots?.();
+
+  const popup = document.getElementById("offlinePopup");
+  if (popup) {
+    popup.style.display = "none";
+    popup.innerHTML = "";
+  }
+
+  saveGame();
+}
+
 function renderOfflinePopup() {
-  const summary = state.offlineSummary;
-  if (!summary) return;
+  const data = state.offlineSummary;
+  if (!data) return;
 
-  const existing = document.getElementById("offlinePopupOverlay");
-  if (existing) existing.remove();
+  const el = document.getElementById("offlinePopup");
+  if (!el) return;
 
-  const essenceRows = Object.entries(summary.essenceGains || {})
-    .filter(([, amount]) => amount > 0)
-    .map(([key, amount]) => `
-      <div class="offlineRewardRow">
-        <span>${formatMaterialName(key)}</span>
-        <b>+${fmt(amount)}</b>
-      </div>
-    `).join("");
+  const trackedRate = state.offlineRate?.killsPerMinute || 0;
+  const efficiency = 0.75;
 
-  const salvageRows = Object.entries(summary.salvageGains || {})
-    .filter(([, amount]) => amount > 0)
-    .map(([key, amount]) => `
-      <div class="offlineRewardRow">
-        <span>${formatMaterialName(key)}</span>
-        <b>+${fmt(amount)}</b>
-      </div>
-    `).join("");
+  const effectiveRate = trackedRate * efficiency;
 
-  const overlay = document.createElement("div");
-  overlay.id = "offlinePopupOverlay";
+  const estimatedKills = Math.floor(
+    effectiveRate * data.minutes
+  );
 
-  overlay.innerHTML = `
-    <div id="offlinePopupBox">
-      <div class="offlinePopupTitle">🌙 Offline Gains</div>
+  el.style.display = "block";
 
-      <div class="offlinePopupSub">
-        You were away for ${formatOfflineDuration(summary.minutes)}.
+  el.innerHTML = `
+    <div class="afkBox">
+
+      <div class="afkTitle">
+        🌙 Offline Gains
       </div>
 
-      <div class="offlineRewardGrid">
-        <div class="offlineRewardRow">
-          <span>Experience</span>
-          <b>+${fmt(summary.totalExp)}</b>
-        </div>
-
-        <div class="offlineRewardRow">
-          <span>Gold</span>
-          <b>+${fmt(summary.totalGold)}</b>
-        </div>
-
-        <div class="offlineRewardRow">
-          <span>Levels</span>
-          <b>+${fmt(summary.gainedLevels || 0)}</b>
-        </div>
-
-        <div class="offlineRewardRow">
-          <span>Equipment Drops</span>
-          <b>+${fmt(summary.equipmentDrops || 0)}</b>
-        </div>
-
-        <div class="offlineRewardRow">
-          <span>Whetstones</span>
-          <b>+${fmt(summary.whetstones || 0)}</b>
-        </div>
-
-        ${essenceRows ? `
-          <div class="offlineRewardSectionTitle">Essences</div>
-          ${essenceRows}
-        ` : ""}
-
-        ${salvageRows ? `
-          <div class="offlineRewardSectionTitle">Salvage Materials</div>
-          ${salvageRows}
-        ` : ""}
+      <div class="afkSubtitle">
+        You were away for ${formatOfflineDuration(data.minutes)}.
       </div>
 
-      <button id="offlinePopupCloseBtn">Claim</button>
+      <div class="afkSectionTitle">
+        Rewards
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Experience</span>
+        <b>+${fmt(data.totalExp)}</b>
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Gold</span>
+        <b>+${fmt(data.totalGold)}</b>
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Levels</span>
+        <b>+${data.gainedLevels}</b>
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Gear Found</span>
+        <b>+${data.equipmentDrops}</b>
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Whetstones</span>
+        <b>+${data.whetstones}</b>
+      </div>
+
+      <div class="afkSectionTitle">
+        Essences
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Green Essence</span>
+        <b>+${data.essenceGains.greenEssence}</b>
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Blue Essence</span>
+        <b>+${data.essenceGains.blueEssence}</b>
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Yellow Essence</span>
+        <b>+${data.essenceGains.yellowEssence}</b>
+      </div>
+
+      <div class="afkRewardRow">
+        <span>Red Essence</span>
+        <b>+${data.essenceGains.redEssence}</b>
+      </div>
+
+      <div class="afkSectionTitle">
+        Salvage Materials
+      </div>
+
+      ${Object.entries(data.salvageGains || {})
+        .filter(([, amount]) => amount > 0)
+        .map(([key, amount]) => `
+          <div class="afkRewardRow">
+            <span>${formatMaterialName(key)}</span>
+            <b>+${amount}</b>
+          </div>
+        `).join("")}
+
+      <div class="afkSectionTitle mutedSection">
+        Calculation
+      </div>
+
+      <div class="afkCalculationRow">
+        <span>Active Kill Rate</span>
+        <span>${trackedRate.toFixed(1)}/min</span>
+      </div>
+
+      <div class="afkCalculationRow">
+        <span>Offline Efficiency</span>
+        <span>${Math.floor(efficiency * 100)}%</span>
+      </div>
+
+      <div class="afkCalculationRow">
+        <span>Offline Kill Rate</span>
+        <span>${effectiveRate.toFixed(1)}/min</span>
+      </div>
+
+      <div class="afkCalculationRow">
+        <span>Estimated Kills</span>
+        <span>${fmt(estimatedKills)}</span>
+      </div>
+
+      <button class="afkContinueBtn" onclick="claimOfflineRewards()">
+        Claim
+      </button>
+
     </div>
   `;
+}
 
-  document.body.appendChild(overlay);
+function recordKillForOfflineRate() {
+  const now = Date.now();
 
-  document.getElementById("offlinePopupCloseBtn").onclick = () => {
-    state.offlineSummary = null;
-    overlay.remove();
-    saveGame();
-  };
+  if (!state.offlineRate) {
+    state.offlineRate = {
+      kills: [],
+      killsPerMinute: 7
+    };
+  }
+
+  state.offlineRate.kills.push(now);
+
+  const windowMs = 5 * 60 * 1000;
+
+  state.offlineRate.kills = state.offlineRate.kills.filter(time =>
+    now - time <= windowMs
+  );
+
+  state.offlineRate.killsPerMinute =
+    state.offlineRate.kills.length / 5;
 }
 
 function formatOfflineDuration(minutes) {

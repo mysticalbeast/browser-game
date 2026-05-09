@@ -235,6 +235,31 @@ function setupOfflineGainTracking() {
   });
 }
 
+function estimateOfflineLevels(expGain) {
+  const snapshot = {
+    level: state.level,
+    exp: state.exp,
+    skillPoints: state.skillPoints,
+    minDamage: state.minDamage,
+    maxDamage: state.maxDamage
+  };
+
+  state.exp += expGain;
+  checkLevelUp();
+
+  const gained = state.level - snapshot.level;
+
+  state.level = snapshot.level;
+  state.exp = snapshot.exp;
+  state.skillPoints = snapshot.skillPoints;
+  state.minDamage = snapshot.minDamage;
+  state.maxDamage = snapshot.maxDamage;
+
+  updateUI?.();
+
+  return gained;
+}
+
 function calculateOfflineGains() {
   if (!state.lastSeenAt) {
     state.lastSeenAt = Date.now();
@@ -247,17 +272,16 @@ function calculateOfflineGains() {
   const maxOfflineMs = 8 * 60 * 60 * 1000;
   const cappedMs = Math.min(elapsedMs, maxOfflineMs);
 
+  const minOfflineMs = 120 * 1000;
+  if (cappedMs < minOfflineMs) return;
+
   const minutes = cappedMs / 60000;
-
-const minOfflineMs = 10 * 1000;
-if (cappedMs < minOfflineMs) return;
-
   const zone = currentZone();
 
-  const killsPerMinute = 20;
-  const efficiency = 0.35;
+  const measuredKillsPerMinute = state.offlineRate?.killsPerMinute || 7;
+  const efficiency = 0.75;
 
-  const kills = Math.floor(minutes * killsPerMinute * efficiency);
+  const kills = Math.floor(minutes * measuredKillsPerMinute * efficiency);
   if (kills <= 0) return;
 
   let totalGold = 0;
@@ -280,22 +304,18 @@ if (cappedMs < minOfflineMs) return;
   };
 
   for (let i = 0; i < kills; i++) {
-    // GOLD / EXP
     totalGold += rand(zone.gold[0], zone.gold[1]);
     totalExp += rand(zone.exp[0], zone.exp[1]);
 
-    // ESSENCE (reuse your logic simplified)
     if (Math.random() < 0.25) essenceGains.greenEssence++;
     if (Math.random() < 0.15) essenceGains.blueEssence++;
     if (Math.random() < 0.10) essenceGains.yellowEssence++;
     if (Math.random() < 0.05) essenceGains.redEssence++;
 
-    // EQUIPMENT
     const dropChance = 0.005;
     if (Math.random() < dropChance) {
       equipmentDrops++;
 
-      // simulate salvage instead of storing items
       const rarityRoll = Math.random();
       if (rarityRoll < 0.6) salvageGains.commonMaterial++;
       else if (rarityRoll < 0.85) salvageGains.uncommonMaterial++;
@@ -303,74 +323,33 @@ if (cappedMs < minOfflineMs) return;
       else salvageGains.legendaryMaterial++;
     }
 
-    // WHETSTONE
     const whetChance = (0.005 + zone.id * 0.0005) / 25;
     if (Math.random() < whetChance) whetstones++;
   }
 
-  // APPLY REWARDS
-  state.gold += totalGold;
-  state.exp += totalExp;
+  const gainedLevels = estimateOfflineLevels(totalExp);
 
-  Object.keys(essenceGains).forEach(k => {
-    state.materials[k] = (state.materials[k] || 0) + essenceGains[k];
-  });
-
-  Object.keys(salvageGains).forEach(k => {
-    state.salvageMaterials[k] = (state.salvageMaterials[k] || 0) + salvageGains[k];
-  });
-
-  state.materials.whetstones = (state.materials.whetstones || 0) + whetstones;
-
-  const startLevel = state.level;
-  checkLevelUp();
-  const gainedLevels = state.level - startLevel;
-
-  // STORE RESULT FOR UI
   state.offlineSummary = {
     minutes,
+    kills,
     gainedLevels,
+    claimed: false,
+
+    activeKillsPerMinute: measuredKillsPerMinute,
+    offlineEfficiency: efficiency,
+
     totalGold,
     totalExp,
+
     equipmentDrops,
     whetstones,
+
     essenceGains,
     salvageGains
   };
 
   state.lastSeenAt = now;
   saveGame();
-}
-
-function renderOfflinePopup() {
-  const data = state.offlineSummary;
-  if (!data) return;
-
-  const el = document.getElementById("offlinePopup");
-  if (!el) return;
-
-  el.style.display = "block";
-
-  el.innerHTML = `
-    <div class="afkBox">
-      <div class="afkTitle">⏳ AFK Progress</div>
-
-      <div>+${data.gainedLevels} Levels</div>
-      <div>+${fmt(data.totalExp)} EXP</div>
-      <div>+${fmt(data.totalGold)} Gold</div>
-      <div>+${data.equipmentDrops} Equipment</div>
-      <div>+${data.whetstones} Whetstones</div>
-
-      <div style="margin-top:10px;">
-        Green: +${data.essenceGains.greenEssence}
-        Blue: +${data.essenceGains.blueEssence}
-        Yellow: +${data.essenceGains.yellowEssence}
-        Red: +${data.essenceGains.redEssence}
-      </div>
-
-      <button onclick="closeOfflinePopup()">Continue</button>
-    </div>
-  `;
 }
 
 function closeOfflinePopup() {

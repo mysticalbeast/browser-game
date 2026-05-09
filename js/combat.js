@@ -1173,6 +1173,9 @@ function killMonster(monster) {
   if (!state.stats) state.stats = {};
 
   state.stats.monstersKilled = (state.stats.monstersKilled || 0) + 1;
+  
+  recordKillForOfflineRate?.();
+  
   state.stats.goldEarned = (state.stats.goldEarned || 0) + goldGain;
   state.stats.expEarned = (state.stats.expEarned || 0) + expGain;
 
