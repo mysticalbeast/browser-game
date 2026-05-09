@@ -1,4 +1,8 @@
+const CLOUD_SAVE_INTERVAL_MS = 30000;
+
 let cloudSaveTimer = null;
+let lastCloudSaveAt = 0;
+let pendingCloudSave = null;
 
 function getLoggedInUser() {
   try {
@@ -45,31 +49,61 @@ function saveGame() {
   scheduleCloudSave(save);
 }
 
+function setCloudSaveStatus(status, className = "") {
+  const el = document.getElementById("cloudSaveStatus");
+  if (!el) return;
+
+  el.className = className;
+  el.textContent = `Cloud Save: ${status}`;
+}
+
 function scheduleCloudSave(save) {
   const user = getLoggedInUser();
   if (!user?.id) return;
 
+  pendingCloudSave = save;
+
+  const now = Date.now();
+  const timeSinceLastUpload = now - lastCloudSaveAt;
+  const delay = Math.max(0, CLOUD_SAVE_INTERVAL_MS - timeSinceLastUpload);
+
   clearTimeout(cloudSaveTimer);
 
   cloudSaveTimer = setTimeout(() => {
-    uploadCloudSave(save);
-  }, 1500);
+    if (!pendingCloudSave) return;
+
+    uploadCloudSave(pendingCloudSave);
+    pendingCloudSave = null;
+  }, delay);
 }
 
 async function uploadCloudSave(save) {
   const user = getLoggedInUser();
-  if (!user?.id) return;
+  if (!user?.id) {
+    setCloudSaveStatus("Local only");
+    return;
+  }
+
+  lastCloudSaveAt = Date.now();
+  setCloudSaveStatus("Saving...", "saving");
 
   try {
-    await fetch(`http://localhost:3000/save/${user.id}`, {
+    const response = await fetch(`${API_URL}/save/${user.id}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ save })
     });
+
+    if (!response.ok) {
+      throw new Error("Cloud save request failed.");
+    }
+
+    setCloudSaveStatus("Saved", "saved");
   } catch (error) {
     console.warn("Cloud save failed:", error);
+    setCloudSaveStatus("Failed", "failed");
   }
 }
 

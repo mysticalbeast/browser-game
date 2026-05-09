@@ -2,10 +2,24 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
+const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 
 const USERS_FILE = path.join(__dirname, "../data/users.json");
+
+function createToken(user) {
+  return jwt.sign(
+    {
+      id: user.id,
+      username: user.username
+    },
+    process.env.JWT_SECRET || "dev_secret_change_later",
+    {
+      expiresIn: "30d"
+    }
+  );
+}
 
 function loadUsers() {
   if (!fs.existsSync(USERS_FILE)) {
@@ -53,10 +67,17 @@ router.post("/register", async (req, res) => {
 
   saveUsers(users);
 
-  res.json({
-    success: true,
-    message: "Account created."
-  });
+  const token = createToken(newUser);
+
+res.json({
+  success: true,
+  message: "Account created.",
+  token,
+  user: {
+    id: newUser.id,
+    username: newUser.username
+  }
+});
 });
 
 router.post("/login", async (req, res) => {
@@ -85,14 +106,17 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  res.json({
-    success: true,
-    message: "Login successful.",
-    user: {
-      id: user.id,
-      username: user.username
-    }
-  });
+  const token = createToken(user);
+
+res.json({
+  success: true,
+  message: "Login successful.",
+  token,
+  user: {
+    id: user.id,
+    username: user.username
+  }
+});
 });
 
 module.exports = router;

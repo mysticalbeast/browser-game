@@ -589,6 +589,11 @@ function bindEvents() {
   document.getElementById("logoutBtn").onclick = () => {
   saveGame();
 
+if (pendingCloudSave) {
+  uploadCloudSave(pendingCloudSave);
+  pendingCloudSave = null;
+}
+
   localStorage.removeItem("loggedInUser");
 
   window.gamePausedForAuth = true;

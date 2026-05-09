@@ -16,5 +16,11 @@
     "username": "CarlTwo",
     "passwordHash": "$2b$10$N5lKs5HzJXwQjBm3dnXa4u9g6q5BtxB2BzAVfOAe3N5Ta6x8usCxa",
     "createdAt": 1778341077867
+  },
+  {
+    "id": "51ce86d0-3899-4c03-8348-e06569f8a03b",
+    "username": "CarlThree",
+    "passwordHash": "$2b$10$g.ujV4k9.XstQ2QjmBl/Y.dVILFTRcE6XNLdySe9rID/V4gYHJMDa",
+    "createdAt": 1778343415502
   }
 ]

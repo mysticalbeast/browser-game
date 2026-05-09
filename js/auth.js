@@ -1,4 +1,4 @@
-const API_URL = "https://dashboard.render.com/web/srv-d7vlp8jeo5us73es5fi0"
+const API_URL = "https://browser-game-du31.onrender.com";
 
 window.gamePausedForAuth = true;
 
@@ -39,6 +39,7 @@ async function authRequest(endpoint) {
 
       document.getElementById("authScreen").style.display = "none";
 	  window.gamePausedForAuth = false;
+	  setCloudSaveStatus?.("Ready", "saved");
 
       updateUI?.();
       renderEquipmentSlots?.();
@@ -101,11 +102,13 @@ if (savedUserRaw) {
   const savedUser = JSON.parse(savedUserRaw);
 
   window.gamePausedForAuth = false;
+  setCloudSaveStatus?.("Ready", "saved");
 
   setDisplayedPlayerName(savedUser.username);
 
   document.getElementById("authScreen").style.display = "none";
   window.gamePausedForAuth = false;
+  setCloudSaveStatus?.("Ready", "saved");
 }
 }
 
