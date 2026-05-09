@@ -595,6 +595,8 @@ if (pendingCloudSave) {
 }
 
   localStorage.removeItem("loggedInUser");
+  
+  localStorage.removeItem("authToken");
 
   window.gamePausedForAuth = true;
 
@@ -643,9 +645,14 @@ function initGame() {
 
   gameLoop();
 
-  setInterval(gameLoop, 150);
+  setInterval(() => {
+    if (window.gamePausedForAuth) return;
+    gameLoop();
+  }, 150);
 
   setInterval(() => {
+    if (window.gamePausedForAuth) return;
+
     updateRewardCoins();
     renderLeftSpellBox();
     renderSpellInfo();
@@ -658,15 +665,27 @@ function initGame() {
     if (document.getElementById("travelPanel")?.style.display === "block") {
       renderZoneList();
     }
-	
-	if (document.getElementById("fishingPanel")?.style.display === "block") {
-  renderFishingPanel?.(state.activeFishingTab || "rod");
-}
+
+    if (document.getElementById("fishingPanel")?.style.display === "block") {
+      renderFishingPanel?.(state.activeFishingTab || "rod");
+    }
 
     updateMenuIndicators();
   }, 1000);
 
-  setInterval(saveGame, 50000);
+  setInterval(() => {
+    if (window.gamePausedForAuth) return;
+    saveGame();
+  }, 15000);
+
+  setInterval(() => {
+    if (window.gamePausedForAuth) return;
+
+    const scorePanel = document.getElementById("scorePanel");
+    if (scorePanel?.style.display === "block") {
+      renderScorePanel?.();
+    }
+  }, 5000);
 }
 
 initGame();

@@ -2,6 +2,8 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 
+const authMiddleware = require("../middleware/auth");
+
 const router = express.Router();
 
 const SAVES_FILE = path.join(__dirname, "../data/saves.json");
@@ -15,8 +17,16 @@ function saveSaves(saves) {
   fs.writeFileSync(SAVES_FILE, JSON.stringify(saves, null, 2));
 }
 
-router.get("/:userId", (req, res) => {
+router.get("/:userId", authMiddleware, (req, res) => {
   const { userId } = req.params;
+  
+  if (String(req.user.id) !== String(userId)) {
+  return res.status(403).json({
+    success: false,
+    message: "You can only access your own save."
+  });
+}
+  
   const saves = loadSaves();
 
   res.json({
@@ -25,8 +35,16 @@ router.get("/:userId", (req, res) => {
   });
 });
 
-router.post("/:userId", (req, res) => {
+router.post("/:userId", authMiddleware, (req, res) => {
   const { userId } = req.params;
+  
+  if (String(req.user.id) !== String(userId)) {
+  return res.status(403).json({
+    success: false,
+    message: "You can only access your own save."
+  });
+}
+  
   const { save } = req.body;
 
   if (!save) {

@@ -2721,12 +2721,12 @@
       "observatory": {
         "active": false,
         "closesAt": 0,
-        "nextCheckAt": 1778344191892
+        "nextCheckAt": 1778344491899
       },
       "starSystem": {
-        "activeZoneId": 3,
-        "nextZoneSwapAt": 1778344303145,
-        "nextSpawnCheckAt": 1778344192886
+        "activeZoneId": 15,
+        "nextZoneSwapAt": 1778345211886,
+        "nextSpawnCheckAt": 1778344492897
       },
       "starUpgrades": {
         "starfall": 0,
@@ -2936,6 +2936,11 @@
       },
       "activeLogFilter": "all",
       "logMessages": [
+        {
+          "text": "✨ Stars are now falling in Medusa Tower!",
+          "type": "system",
+          "time": 1778344311886
+        },
         {
           "text": "🪙 Rat killed. +4 gold, +6 exp.",
           "type": "combat",
@@ -3530,11 +3535,6 @@
           "text": "🪙 Cave Rat killed. +2 gold, +8 exp.",
           "type": "combat",
           "time": 1778343523130
-        },
-        {
-          "text": "🪙 Cave Rat killed. +5 gold, +7 exp.",
-          "type": "combat",
-          "time": 1778343518990
         }
       ],
       "zoneId": 1,
@@ -3632,8 +3632,8 @@
       "fishing": {
         "fish": 3,
         "rodOwned": true,
-        "lastAttemptAt": 1778344131892,
-        "nextAttemptAt": 1778344191892,
+        "lastAttemptAt": 1778344431899,
+        "nextAttemptAt": 1778344491899,
         "upgrades": {
           "quickCast": 0,
           "luckyHook": 0,
@@ -3692,7 +3692,7 @@
           }
         }
       },
-      "lastSeenAt": 1778344131904,
+      "lastSeenAt": 1778344431904,
       "automationToggles": {
         "autoBuy": true,
         "autoTravel": true,
@@ -3701,12 +3701,12 @@
       "researchBreakthrough": {
         "active": false,
         "closesAt": 0,
-        "nextCheckAt": 1778344191892
+        "nextCheckAt": 1778344491899
       },
       "siegeEvent": {
         "active": false,
         "endsAt": 0,
-        "nextCheckAt": 1778344191892,
+        "nextCheckAt": 1778344491899,
         "nextSpawnAt": 0,
         "wallHp": 0,
         "wallMaxHp": 0,
@@ -3759,6 +3759,6 @@
       "activeFishingTab": "rod",
       "leaderboardSort": "level"
     },
-    "updatedAt": 1778344191904
+    "updatedAt": 1778344491904
   }
 }

@@ -4951,6 +4951,7 @@ async function renderScorePanel() {
 
   if (!state.leaderboardSort) state.leaderboardSort = "level";
 
+  if (!box.dataset.loaded) {
   box.innerHTML = `
     <div class="leaderboardControls">
       <button class="${state.leaderboardSort === "level" ? "active" : ""}" onclick="setLeaderboardSort('level')">Level</button>
@@ -4960,13 +4961,18 @@ async function renderScorePanel() {
       <button class="${state.leaderboardSort === "stars" ? "active" : ""}" onclick="setLeaderboardSort('stars')">Stars</button>
     </div>
 
-    <div style="padding:12px;color:#c7a044;">Loading leaderboard...</div>
+    <div style="padding:12px;color:#c7a044;">
+      Loading leaderboard...
+    </div>
   `;
+
+  box.dataset.loaded = "true";
+}
 
   let entries = [];
 
   try {
-    const response = await fetch("http://localhost:3000/leaderboard");
+    const response = await fetch(`${API_URL}/leaderboard`);
     const data = await response.json();
 
     if (data.success && Array.isArray(data.leaderboard)) {

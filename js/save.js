@@ -4,6 +4,10 @@ let cloudSaveTimer = null;
 let lastCloudSaveAt = 0;
 let pendingCloudSave = null;
 
+function getAuthToken() {
+  return localStorage.getItem("authToken");
+}
+
 function getLoggedInUser() {
   try {
     return JSON.parse(localStorage.getItem("loggedInUser"));
@@ -91,8 +95,9 @@ async function uploadCloudSave(save) {
     const response = await fetch(`${API_URL}/save/${user.id}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
-      },
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${getAuthToken()}`
+},
       body: JSON.stringify({ save })
     });
 

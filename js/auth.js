@@ -1,5 +1,9 @@
 const API_URL = "https://browser-game-du31.onrender.com";
 
+function getAuthToken() {
+  return localStorage.getItem("authToken");
+}
+
 window.gamePausedForAuth = true;
 
 async function authRequest(endpoint) {
@@ -33,6 +37,7 @@ async function authRequest(endpoint) {
 
     if (endpoint === "/auth/login") {
       localStorage.setItem("loggedInUser", JSON.stringify(data.user));
+	  localStorage.setItem("authToken", data.token);
 	  setDisplayedPlayerName(data.user.username);
 
       await loadCloudSaveAfterLogin(data.user.id);
@@ -54,7 +59,11 @@ async function authRequest(endpoint) {
 
 async function loadCloudSaveAfterLogin(userId) {
   try {
-    const response = await fetch(`${API_URL}/save/${userId}`);
+    const response = await fetch(`${API_URL}/save/${userId}`, {
+  headers: {
+    "Authorization": `Bearer ${getAuthToken()}`
+  }
+});
     const data = await response.json();
 
     if (!data.success || !data.save?.save) {
@@ -101,14 +110,12 @@ function bindAuthUI() {
 if (savedUserRaw) {
   const savedUser = JSON.parse(savedUserRaw);
 
-  window.gamePausedForAuth = false;
-  setCloudSaveStatus?.("Ready", "saved");
-
   setDisplayedPlayerName(savedUser.username);
 
-  document.getElementById("authScreen").style.display = "none";
   window.gamePausedForAuth = false;
   setCloudSaveStatus?.("Ready", "saved");
+} else {
+  document.getElementById("authScreen").style.display = "flex";
 }
 }
 
