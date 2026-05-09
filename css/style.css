@@ -4339,3 +4339,67 @@ small {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+#authScreen {
+  position: fixed;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 999999;
+}
+
+#authBox {
+  width: 320px;
+  padding: 24px;
+
+  background: #14110d;
+  border: 2px solid #a16b00;
+  border-radius: 8px;
+
+  box-shadow:
+    0 0 20px rgba(0,0,0,0.8),
+    0 0 12px rgba(255,170,0,0.2);
+}
+
+.authTitle {
+  margin-bottom: 18px;
+
+  color: #f0c15b;
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+}
+
+#authBox input {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px;
+
+  background: #0b0907;
+  border: 1px solid #6e4a00;
+  color: white;
+
+  box-sizing: border-box;
+}
+
+.authButtons {
+  display: flex;
+  gap: 10px;
+}
+
+.authButtons button {
+  flex: 1;
+}
+
+#authMessage {
+  margin-top: 14px;
+  min-height: 20px;
+
+  color: #ffb347;
+  text-align: center;
+  font-size: 14px;
+}

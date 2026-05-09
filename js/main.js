@@ -382,6 +382,9 @@ function startSkeletonRenderLoop() {
 }
 
 function gameLoop() {
+	
+  if (window.gamePausedForAuth) return;
+  
   const zone = currentZone();
 
   if (!zone.noMonsters) {
@@ -583,7 +586,20 @@ function bindEvents() {
     };
   });
 
-  document.getElementById("logoutBtn").onclick = saveGame;
+  document.getElementById("logoutBtn").onclick = () => {
+  saveGame();
+
+  localStorage.removeItem("loggedInUser");
+
+  window.gamePausedForAuth = true;
+
+  document.getElementById("authScreen").style.display = "flex";
+
+  const messageEl = document.getElementById("authMessage");
+  if (messageEl) {
+    messageEl.textContent = "Logged out.";
+  }
+};
 
   bindTestingButtons();
 

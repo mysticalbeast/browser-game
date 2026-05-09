@@ -1,0 +1,20 @@
+[
+  {
+    "id": "34cbc1e8-729b-425f-aa50-494e3bce5382",
+    "username": "Carl",
+    "passwordHash": "$2b$10$AkJ6ALs3CNh/d.RRuXQ/b.x/Jp7FesMLRm9LHiGmhC.vZu9tXUBq6",
+    "createdAt": 1778339558173
+  },
+  {
+    "id": "3bd6dc29-4b89-4cf3-a15d-c95e520a5808",
+    "username": "TestPlayer",
+    "passwordHash": "$2b$10$r4570Mva5kjljC2KfGX3hOoS2H1r/on5bL6.JJwJkUTzO30Ubr0Te",
+    "createdAt": 1778339967954
+  },
+  {
+    "id": "2f0d6431-b0dd-4e08-8ab5-40cde41873cd",
+    "username": "CarlTwo",
+    "passwordHash": "$2b$10$N5lKs5HzJXwQjBm3dnXa4u9g6q5BtxB2BzAVfOAe3N5Ta6x8usCxa",
+    "createdAt": 1778341077867
+  }
+]

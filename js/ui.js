@@ -4945,27 +4945,54 @@ function getResearchMilestonesCompleted() {
   }, 0);
 }
 
-function renderScorePanel() {
+async function renderScorePanel() {
   const box = document.getElementById("scoreContent");
   if (!box) return;
 
   if (!state.leaderboardSort) state.leaderboardSort = "level";
 
-  const entries = [
-    {
-  name: "You",
-  level: state.level,
-  monstersKilled: state.stats?.monstersKilled || 0,
-  goldCollected: state.stats?.goldEarned || 0,
-  researchMilestones: getResearchMilestonesCompleted(),
-  starsCollected: state.stats?.starsCollected || 0
-},
-    { name: "RotwormEnjoyer", level: 42, monstersKilled: 820, goldCollected: 125000, researchMilestones: 18, starsCollected: 2670000 },
-{ name: "MinotaurMain", level: 35, monstersKilled: 610, goldCollected: 91000, researchMilestones: 12, starsCollected: 140000 },
-{ name: "LootGoblin", level: 28, monstersKilled: 430, goldCollected: 180000, researchMilestones: 9, starsCollected: 250000 }
-  ];
+  box.innerHTML = `
+    <div class="leaderboardControls">
+      <button class="${state.leaderboardSort === "level" ? "active" : ""}" onclick="setLeaderboardSort('level')">Level</button>
+      <button class="${state.leaderboardSort === "kills" ? "active" : ""}" onclick="setLeaderboardSort('kills')">Kills</button>
+      <button class="${state.leaderboardSort === "gold" ? "active" : ""}" onclick="setLeaderboardSort('gold')">Gold</button>
+      <button class="${state.leaderboardSort === "research" ? "active" : ""}" onclick="setLeaderboardSort('research')">Research</button>
+      <button class="${state.leaderboardSort === "stars" ? "active" : ""}" onclick="setLeaderboardSort('stars')">Stars</button>
+    </div>
 
-  // sorting
+    <div style="padding:12px;color:#c7a044;">Loading leaderboard...</div>
+  `;
+
+  let entries = [];
+
+  try {
+    const response = await fetch("http://localhost:3000/leaderboard");
+    const data = await response.json();
+
+    if (data.success && Array.isArray(data.leaderboard)) {
+      entries = data.leaderboard.map(entry => ({
+        userId: entry.userId,
+        name: entry.username,
+        level: entry.level || 1,
+        monstersKilled: entry.monstersKilled || 0,
+        goldCollected: entry.gold || 0,
+        researchMilestones: entry.researchMilestones || 0,
+        starsCollected: entry.starsCollected || 0
+      }));
+    }
+  } catch (error) {
+    console.warn("Leaderboard fetch failed:", error);
+  }
+
+  if (entries.length === 0) {
+    box.innerHTML += `
+      <div style="padding:12px;color:#ff9999;">
+        Could not load leaderboard.
+      </div>
+    `;
+    return;
+  }
+
   if (state.leaderboardSort === "level") {
     entries.sort((a, b) => b.level - a.level);
   }
@@ -4977,23 +5004,25 @@ function renderScorePanel() {
   if (state.leaderboardSort === "gold") {
     entries.sort((a, b) => b.goldCollected - a.goldCollected);
   }
-  
-  if (state.leaderboardSort === "research") {
-  entries.sort((a, b) => b.researchMilestones - a.researchMilestones);
-}
 
-if (state.leaderboardSort === "stars") {
-  entries.sort((a, b) => b.starsCollected - a.starsCollected);
-}
+  if (state.leaderboardSort === "research") {
+    entries.sort((a, b) => b.researchMilestones - a.researchMilestones);
+  }
+
+  if (state.leaderboardSort === "stars") {
+    entries.sort((a, b) => b.starsCollected - a.starsCollected);
+  }
+
+  const currentUser = getLoggedInUser?.();
 
   box.innerHTML = `
     <div class="leaderboardControls">
-  <button class="${state.leaderboardSort === "level" ? "active" : ""}" onclick="setLeaderboardSort('level')">Level</button>
-  <button class="${state.leaderboardSort === "kills" ? "active" : ""}" onclick="setLeaderboardSort('kills')">Kills</button>
-  <button class="${state.leaderboardSort === "gold" ? "active" : ""}" onclick="setLeaderboardSort('gold')">Gold</button>
-  <button class="${state.leaderboardSort === "research" ? "active" : ""}" onclick="setLeaderboardSort('research')">Research</button>
-  <button class="${state.leaderboardSort === "stars" ? "active" : ""}" onclick="setLeaderboardSort('stars')">Stars</button>
-</div>
+      <button class="${state.leaderboardSort === "level" ? "active" : ""}" onclick="setLeaderboardSort('level')">Level</button>
+      <button class="${state.leaderboardSort === "kills" ? "active" : ""}" onclick="setLeaderboardSort('kills')">Kills</button>
+      <button class="${state.leaderboardSort === "gold" ? "active" : ""}" onclick="setLeaderboardSort('gold')">Gold</button>
+      <button class="${state.leaderboardSort === "research" ? "active" : ""}" onclick="setLeaderboardSort('research')">Research</button>
+      <button class="${state.leaderboardSort === "stars" ? "active" : ""}" onclick="setLeaderboardSort('stars')">Stars</button>
+    </div>
 
     <div class="leaderboardHeader">
       <span>Rank</span>
@@ -5001,19 +5030,19 @@ if (state.leaderboardSort === "stars") {
       <span>Lvl</span>
       <span>Kills</span>
       <span>Gold</span>
-	  <span>Research</span>
-	  <span>Stars</span>
+      <span>Research</span>
+      <span>Stars</span>
     </div>
 
     ${entries.map((entry, index) => `
-      <div class="leaderboardRow ${entry.name === "You" ? "you" : ""}">
+      <div class="leaderboardRow ${String(entry.userId) === String(currentUser?.id) ? "you" : ""}">
         <span>#${index + 1}</span>
         <span>${entry.name}</span>
         <span>${entry.level}</span>
         <span>${fmt(entry.monstersKilled)}</span>
         <span>${fmt(entry.goldCollected)}</span>
-		<span>${fmt(entry.researchMilestones || 0)}</span>
-		<span>${fmt(entry.starsCollected || 0)}</span>
+        <span>${fmt(entry.researchMilestones || 0)}</span>
+        <span>${fmt(entry.starsCollected || 0)}</span>
       </div>
     `).join("")}
   `;
