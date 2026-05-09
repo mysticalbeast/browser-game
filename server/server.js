@@ -5,6 +5,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/auth");
 const saveRoutes = require("./routes/save");
 const leaderboardRoutes = require("./routes/leaderboard");
+const onlineRoutes = require("./routes/online");
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.get("/", (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/save", saveRoutes);
 app.use("/leaderboard", leaderboardRoutes);
+app.use("/online", onlineRoutes);
 
 const PORT = process.env.PORT || 3000;
 

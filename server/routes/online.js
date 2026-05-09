@@ -1,0 +1,46 @@
+const express = require("express");
+const authMiddleware = require("../middleware/auth");
+
+const router = express.Router();
+
+const ONLINE_TIMEOUT_MS = 60000;
+
+const onlinePlayers = new Map();
+
+function getOnlineList() {
+  const now = Date.now();
+
+  for (const [userId, player] of onlinePlayers.entries()) {
+    if (now - player.lastSeenAt > ONLINE_TIMEOUT_MS) {
+      onlinePlayers.delete(userId);
+    }
+  }
+
+  return Array.from(onlinePlayers.values())
+    .sort((a, b) => a.username.localeCompare(b.username));
+}
+
+router.post("/heartbeat", authMiddleware, (req, res) => {
+  onlinePlayers.set(String(req.user.id), {
+    userId: req.user.id,
+    username: req.user.username,
+    lastSeenAt: Date.now()
+  });
+
+  res.json({
+    success: true,
+    onlineCount: getOnlineList().length
+  });
+});
+
+router.get("/", (req, res) => {
+  const players = getOnlineList();
+
+  res.json({
+    success: true,
+    onlineCount: players.length,
+    players
+  });
+});
+
+module.exports = router;
