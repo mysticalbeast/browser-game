@@ -9,6 +9,8 @@ const CHAT_FILE = path.join(__dirname, "../data/chat.json");
 
 const MAX_MESSAGES = 100;
 const MAX_MESSAGE_LENGTH = 200;
+const CHAT_COOLDOWN_MS = 2500;
+const userLastMessageAt = new Map();
 
 function loadMessages() {
   if (!fs.existsSync(CHAT_FILE)) return [];
@@ -36,6 +38,18 @@ router.get("/", (req, res) => {
 
 router.post("/", authMiddleware, (req, res) => {
   const text = String(req.body.text || "").trim();
+
+const now = Date.now();
+const lastMessageAt = userLastMessageAt.get(req.user.id) || 0;
+
+if (now - lastMessageAt < CHAT_COOLDOWN_MS) {
+  return res.status(429).json({
+    success: false,
+    message: "You are sending messages too quickly."
+  });
+}
+
+userLastMessageAt.set(req.user.id, now);
 
   if (!text) {
     return res.status(400).json({
