@@ -3,7 +3,7 @@ const ZONES = [
     id: 1,
     name: "Rookgaard Sewers",
     levelReq: 1,
-    background: "assets/backgrounds/Rookgaard_Sewers.PNG",
+    background: "assets/backgrounds/rookgaard_sewers.PNG",
     hp: 25,
     gold: [2, 5],
     exp: [4, 8],

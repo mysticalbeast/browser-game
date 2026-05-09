@@ -60,14 +60,14 @@ function recordBattleRhythmHit(monsterId) {
 const SUMMON_GROUND_OFFSET = 32;
 
 const SUMMON_CONFIG = {
-  sprite: "assets/summons/minotaur.gif",
+  sprite: "assets/summons/Minotaur.gif",
   width: 200,
   height: 200,
   name: "Minotaur Archer"
 };
 
 const NECRO_CONFIG = {
-  sprite: "assets/summons/necromancer.gif",
+  sprite: "assets/summons/Necromancer.gif",
   width: 200,
   height: 200,
   name: "Necromancer"

@@ -5416,7 +5416,7 @@ function renderSkeletons() {
       el = document.createElement("div");
       el.dataset.skeletonId = String(skeleton.id);
       el.innerHTML = `
-        <img src="assets/summons/skeleton.gif" onerror="this.style.display='none';">
+        <img src="assets/summons/Skeleton.gif" onerror="this.style.display='none';">
       `;
       arena.appendChild(el);
     }

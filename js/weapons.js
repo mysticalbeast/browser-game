@@ -15,7 +15,7 @@ const WEAPONS = [
   { name: "Mystic Blade", levelReq: 270, cost: 3200000, min: 400, max: 585, sprite: "assets/weapons/Mystic_Blade.gif" },
   { name: "Crystalline Sword", levelReq: 317, cost: 5500000, min: 520, max: 760, sprite: "assets/weapons/Crystalline_Sword.gif" },
   { name: "Relic Sword", levelReq: 368, cost: 9000000, min: 660, max: 960, sprite: "assets/weapons/Relic_Sword.gif" },
-  { name: "Blade of Corruption", levelReq: 423, cost: 14000000, min: 830, max: 1200, sprite: "assets/weapons/Blade_of_corruption.gif" },
+  { name: "Blade of Corruption", levelReq: 423, cost: 14000000, min: 830, max: 1200, sprite: "assets/weapons/Blade_of_Corruption.gif" },
   { name: "Blade of Destruction", levelReq: 482, cost: 21000000, min: 1020, max: 1450, sprite: "assets/weapons/Blade_of_Destruction.gif" },
 
   { name: "Emerald Sword", levelReq: 545, cost: 32000000, min: 1250, max: 1800, sprite: "assets/weapons/Emerald_Sword.gif" },
