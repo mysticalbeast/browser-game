@@ -388,6 +388,8 @@ hr {
   background: #090704;
   border-left: 2px solid #8b650f;
   padding: 7px;
+  display: flex;
+  flex-direction: column;
 }
 
 .panelTitle {
@@ -3755,21 +3757,27 @@ small {
 }
 
 #backpack {
-  position: absolute;
-
-  top: 325px; /* keep your current top */
-  right: 12px;
+  position: relative;
+  top: auto;
+  right: auto;
 
   width: 180px;
 
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(4, 38px);
+  grid-template-rows: repeat(6, 38px);
+  gap: 4px;
+  padding: 4px;
+
+  align-self: center;
 }
 
 .backpackGrid {
   display: grid;
   grid-template-columns: repeat(4, 38px);
   grid-template-rows: repeat(6, 38px);
+  
+  flex-shrink: 0;
 
   gap: 4px;
   padding: 4px;
@@ -4450,4 +4458,101 @@ small {
   z-index: 5;
 
   pointer-events: none;
+}
+
+#globalChatBox {
+  margin-top: 14px;
+  padding: 8px;
+  border-top: 1px solid #5a3d00;
+}
+
+#globalChatTitle {
+  color: #ffd36a;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+#globalChatMessages {
+  height: 220px;
+  overflow-y: auto;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid #5a3d00;
+  font-size: 11px;
+}
+
+.chatMessage {
+  margin-bottom: 5px;
+  line-height: 1.25;
+}
+
+.chatUser {
+  color: #7cff7c;
+  font-weight: bold;
+}
+
+.chatText {
+  color: #ddd;
+}
+
+#globalChatInputRow {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+#globalChatInput {
+  flex: 1;
+  min-width: 0;
+  background: #080604;
+  border: 1px solid #5a3d00;
+  color: white;
+  font-size: 11px;
+  padding: 4px;
+}
+
+#globalChatSendBtn {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
+#globalChatBox {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+#globalChatBox {
+  margin-top: 22px;
+  padding-top: 10px;
+  border-top: 1px solid #5a3d00;
+  width: 100%;
+  box-sizing: border-box;
+  clear: both;
+  position: relative;
+}
+
+#globalChatTitle {
+  margin-bottom: 6px;
+}
+
+#globalChatMessages {
+  height: 180px;
+  min-height: 180px;
+  max-height: 180px;
+  overflow-y: auto;
+
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid #5a3d00;
+  box-sizing: border-box;
+}
+
+#globalChatInputRow {
+  margin-top: 6px;
+}
+
+#globalChatBox {
+  margin-top: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }

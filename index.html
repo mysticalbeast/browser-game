@@ -9,43 +9,23 @@
 </head>
 
 <body>
-  
+
   <div id="authScreen" style="display:none;">
+    <div id="authBox">
+      <div class="authTitle">Browser Game</div>
 
-  <div id="authBox">
+      <input id="authUsername" type="text" placeholder="Username">
+      <input id="authPassword" type="password" placeholder="Password">
 
-    <div class="authTitle">
-      Browser Game
+      <div class="authButtons">
+        <button id="loginBtn">Login</button>
+        <button id="registerBtn">Register</button>
+      </div>
+
+      <div id="authMessage"></div>
     </div>
-
-    <input
-      id="authUsername"
-      type="text"
-      placeholder="Username"
-    >
-
-    <input
-      id="authPassword"
-      type="password"
-      placeholder="Password"
-    >
-
-    <div class="authButtons">
-      <button id="loginBtn">
-        Login
-      </button>
-
-      <button id="registerBtn">
-        Register
-      </button>
-    </div>
-
-    <div id="authMessage"></div>
-
   </div>
 
-</div>
-  
   <div id="game">
     <aside id="leftPanel">
       <div class="menuGrid">
@@ -58,9 +38,9 @@
         <button class="menuBtn" id="rewardsBtn">🎁<br>Rewards</button>
         <button class="menuBtn" id="blacksmithBtn">🛠<br>Blacksmith</button>
         <button class="menuBtn" id="depotBtn">📦<br>Depot</button>
-		<button class="menuBtn" id="starforgeBtn">⭐<br>Starforge</button>
-		<button id="fishingBtn" class="menuBtn">🎣<br>Fishing</button>
-		<button id="skinsBtn" class="menuBtn">🎨<br>Skins</button>
+        <button class="menuBtn" id="starforgeBtn">⭐<br>Starforge</button>
+        <button class="menuBtn" id="fishingBtn">🎣<br>Fishing</button>
+        <button class="menuBtn" id="skinsBtn">🎨<br>Skins</button>
         <button class="menuBtn" id="statsBtn">📊<br>Stats</button>
         <button class="menuBtn" id="rebirthBtn">🔁<br>Rebirth</button>
         <button class="menuBtn" id="rebirthShopBtn">🪙<br>Rebirth Shop</button>
@@ -77,11 +57,9 @@
         <div class="bar"><div class="barFill" id="expBar"></div></div>
 
         Gold <span id="goldText" class="rightWhite">0</span><br>
-		Rebirth Coins <span class="rightWhite" id="rebirthCoinsText">0</span><br>
-
-		Stars <span id="starsText" class="rightWhite">0</span><br>
-
-		Location <span id="zoneText" class="rightBlue">Rookgaard Sewers</span>
+        Rebirth Coins <span class="rightWhite" id="rebirthCoinsText">0</span><br>
+        Stars <span id="starsText" class="rightWhite">0</span><br>
+        Location <span id="zoneText" class="rightBlue">Rookgaard Sewers</span>
 
         <hr>
 
@@ -105,25 +83,23 @@
       </div>
 
       <button class="menuBtn" id="logoutBtn">Logout</button>
-	  <div id="cloudSaveStatus">Cloud Save: Local only</div>
+      <div id="cloudSaveStatus">Cloud Save: Local only</div>
     </aside>
 
     <main id="center">
+      <div id="onlinePlayersBar">
+        🟢 Online Players: 0
+      </div>
 
-  <div id="onlinePlayersBar">
-    🟢 Online Players: 0
-  </div>
+      <section id="arena">
+        <div id="spawnInfo">
+          <div id="spawnInfoTitle">Possible Spawns</div>
+          <div id="spawnInfoList"></div>
+        </div>
 
-  <section id="arena">
-    <div id="spawnInfo">
-      <div id="spawnInfoTitle">Possible Spawns</div>
-      <div id="spawnInfoList"></div>
-    </div>
-
-    <div id="filterNotifications"></div>
-  </section>
-
-</main>
+        <div id="filterNotifications"></div>
+      </section>
+    </main>
 
     <aside id="rightPanel">
       <div class="panelTitle">⚔ Equipment</div>
@@ -131,6 +107,17 @@
 
       <div class="panelTitle backpackTitle">🎒 Backpack</div>
       <div class="backpackGrid" id="backpack"></div>
+
+      <div id="globalChatBox">
+        <div id="globalChatTitle">💬 Global Chat</div>
+
+        <div id="globalChatMessages"></div>
+
+        <div id="globalChatInputRow">
+          <input id="globalChatInput" type="text" maxlength="200" placeholder="Type message...">
+          <button id="globalChatSendBtn">Send</button>
+        </div>
+      </div>
     </aside>
   </div>
 
@@ -168,7 +155,7 @@
     <div id="researchContent"></div>
   </div>
 
-<div id="skinsPanel" class="panel" style="display:none;"></div>
+  <div id="skinsPanel" class="panel" style="display:none;"></div>
 
   <div id="rewardsPanel" class="panel uiPanel">
     <div class="uiPanelHeader">
@@ -184,14 +171,14 @@
     <div id="statsContent"></div>
   </div>
 
-<div id="starforgePanel" class="panel uiPanel">
-  <div class="uiPanelHeader">
-    <div class="uiPanelTitle">Starforge</div>
+  <div id="starforgePanel" class="panel uiPanel">
+    <div class="uiPanelHeader">
+      <div class="uiPanelTitle">Starforge</div>
+    </div>
+    <div id="starforgeContent"></div>
   </div>
-  <div id="starforgeContent"></div>
-</div>
 
-<div id="fishingPanel" class="panel" style="display:none;"></div>
+  <div id="fishingPanel" class="panel" style="display:none;"></div>
 
   <div id="scorePanel" class="panel uiPanel">
     <div class="uiPanelHeader">
@@ -233,8 +220,7 @@
       <div class="uiPanelTitle">Depot</div>
     </div>
 
-  <div class="depotTabs" id="depotTabs"></div>
-
+    <div class="depotTabs" id="depotTabs"></div>
     <div id="depotGrid"></div>
   </div>
 
@@ -254,25 +240,26 @@
   <div id="skillTooltip"></div>
   <div id="itemTooltip"></div>
 
-<script src="js/state.js"></script>
-<script src="js/utils.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
 
-<script src="js/items.js"></script>
-<script src="js/zones.js"></script>
-<script src="js/randomEvents.js"></script>
-<script src="js/fishing.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/zones.js"></script>
+  <script src="js/randomEvents.js"></script>
+  <script src="js/fishing.js"></script>
 
-<script src="js/weapons.js"></script>
-<script src="js/skills.js"></script>
-<script src="js/skins.js"></script>
-<script src="js/monsters.js"></script>
-<script src="js/combat.js"></script>
-<script src="js/spells.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skins.js"></script>
+  <script src="js/monsters.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/spells.js"></script>
 
-<script src="js/ui.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/save.js"></script>
-<script src="js/testing.js"></script>
-<script src="js/main.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/testing.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>

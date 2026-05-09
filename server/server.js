@@ -6,6 +6,7 @@ const authRoutes = require("./routes/auth");
 const saveRoutes = require("./routes/save");
 const leaderboardRoutes = require("./routes/leaderboard");
 const onlineRoutes = require("./routes/online");
+const chatRoutes = require("./routes/chat");
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/auth", authRoutes);
 app.use("/save", saveRoutes);
 app.use("/leaderboard", leaderboardRoutes);
 app.use("/online", onlineRoutes);
+app.use("/chat", chatRoutes);
 
 const PORT = process.env.PORT || 3000;
 
