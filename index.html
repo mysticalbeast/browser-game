@@ -92,13 +92,32 @@
       </div>
 
       <section id="arena">
-        <div id="spawnInfo">
-          <div id="spawnInfoTitle">Possible Spawns</div>
-          <div id="spawnInfoList"></div>
-        </div>
 
-        <div id="filterNotifications"></div>
-      </section>
+  <div id="globalChatBox">
+    <div id="globalChatHeader">
+  <div id="globalChatTitle">💬 Global Chat</div>
+
+  <button id="globalChatMinimizeBtn">
+    —
+  </button>
+</div>
+
+    <div id="globalChatContent">
+
+  <div id="globalChatMessages"></div>
+
+  <div id="globalChatInputRow">
+    <input id="globalChatInput" type="text" maxlength="200" placeholder="Type message...">
+    <button id="globalChatSendBtn">Send</button>
+  </div>
+
+  <div id="globalChatStatus"></div>
+
+</div>
+  </div>
+
+  <div id="filterNotifications"></div>
+</section>
     </main>
 
     <aside id="rightPanel">
@@ -107,17 +126,6 @@
 
       <div class="panelTitle backpackTitle">🎒 Backpack</div>
       <div class="backpackGrid" id="backpack"></div>
-
-      <div id="globalChatBox">
-        <div id="globalChatTitle">💬 Global Chat</div>
-
-        <div id="globalChatMessages"></div>
-
-        <div id="globalChatInputRow">
-          <input id="globalChatInput" type="text" maxlength="200" placeholder="Type message...">
-          <button id="globalChatSendBtn">Send</button>
-        </div>
-      </div>
     </aside>
   </div>
 

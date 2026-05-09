@@ -2625,9 +2625,7 @@ small {
 .skillNode.category {
   width: 140px;
   height: 140px;
-  border: none;
-  background: none;
-  z-index: 3;
+  border-radius: 50%;
 }
 
 .skillNode.skill {
@@ -2822,12 +2820,7 @@ small {
 }
 
 .skillNode.category .skillNodeFrame {
-  display: none;
-}
-
-.skillNode.category .skillNodeIcon {
-  width: 140px;
-  height: 140px;
+  display: block;
 }
 
 .skillNodeLabel {
@@ -2884,9 +2877,19 @@ small {
 }
 
 .skillNode.category .skillNodeLabel {
-  bottom: -28px;
-  font-size: 11px;
-  color: #ffd24a;
+  top: 146px;
+
+  font-size: 18px;
+
+  min-width: 120px;
+  padding: 10px 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .skillNode.category .skillNodeLevel {
@@ -4460,27 +4463,6 @@ small {
   pointer-events: none;
 }
 
-#globalChatBox {
-  margin-top: 14px;
-  padding: 8px;
-  border-top: 1px solid #5a3d00;
-}
-
-#globalChatTitle {
-  color: #ffd36a;
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-
-#globalChatMessages {
-  height: 220px;
-  overflow-y: auto;
-  padding: 6px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid #5a3d00;
-  font-size: 11px;
-}
-
 .chatMessage {
   margin-bottom: 5px;
   line-height: 1.25;
@@ -4495,18 +4477,14 @@ small {
   color: #ddd;
 }
 
-#globalChatInputRow {
-  display: flex;
-  gap: 4px;
-  margin-top: 6px;
-}
-
 #globalChatInput {
   flex: 1;
   min-width: 0;
+
   background: #080604;
   border: 1px solid #5a3d00;
   color: white;
+
   font-size: 11px;
   padding: 4px;
 }
@@ -4516,43 +4494,164 @@ small {
   padding: 4px 6px;
 }
 
-#globalChatBox {
-  margin-top: 18px;
-  display: flex;
-  flex-direction: column;
-}
-
-#globalChatBox {
-  margin-top: 22px;
-  padding-top: 10px;
-  border-top: 1px solid #5a3d00;
-  width: 100%;
-  box-sizing: border-box;
-  clear: both;
-  position: relative;
-}
-
 #globalChatTitle {
+  color: #ffd36a;
+  font-weight: bold;
   margin-bottom: 6px;
 }
 
 #globalChatMessages {
-  height: 180px;
-  min-height: 180px;
-  max-height: 180px;
+  height: calc(100% - 76px);
   overflow-y: auto;
+
+  padding: 6px;
+  box-sizing: border-box;
 
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid #5a3d00;
-  box-sizing: border-box;
+
+  font-size: 11px;
 }
 
 #globalChatInputRow {
+  display: flex;
+  gap: 4px;
   margin-top: 6px;
 }
 
 #globalChatBox {
-  margin-top: 16px;
-  width: 100%;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  width: 360px;
+  height: 260px;
+  min-width: 260px;
+  min-height: 180px;
+  max-width: 700px;
+  max-height: 520px;
+
+  resize: both;
+  overflow: hidden;
+
+  padding: 8px;
   box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+
+  background: rgba(5, 3, 1, 0.88);
+  border: 1px solid #8b650f;
+  border-radius: 4px;
+
+  z-index: 20;
+}
+
+#globalChatStatus {
+  margin-top: 4px;
+  min-height: 12px;
+  color: #ffb347;
+  font-size: 10px;
+  text-align: center;
+}
+
+#globalChatStatus.error {
+  color: #ff6b6b;
+}
+
+#globalChatStatus.success {
+  color: #7cff7c;
+}
+
+.chatTime {
+  color: #8f8f8f;
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+#globalChatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 6px;
+}
+
+#globalChatMinimizeBtn {
+  width: 22px;
+  height: 22px;
+
+  background: #1a1204;
+  border: 1px solid #8b650f;
+  color: #ffd36a;
+
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#globalChatMinimizeBtn:hover {
+  background: #2a1c08;
+}
+
+#globalChatBox.minimized {
+  height: auto !important;
+  min-height: 0 !important;
+  resize: none;
+}
+
+#globalChatBox.minimized #globalChatContent {
+  display: none;
+}
+
+#globalChatContent {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+#globalChatMessages {
+  flex: 1;
+  min-height: 0;
+
+  overflow-y: auto;
+
+  padding: 6px;
+  box-sizing: border-box;
+
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid #5a3d00;
+
+  font-size: 11px;
+}
+
+.skillNodeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  font-size: 24px;
+  line-height: 1;
+
+  background-image: none !important;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  pointer-events: none;
+  text-shadow: 0 0 4px #000;
+}
+
+.skillNode.category .skillNodeIcon {
+  width: 100%;
+  height: 100%;
+  font-size: 64px;
+}
+
+.skillNode.modifierNode .skillNodeIcon {
+  font-size: 22px;
 }

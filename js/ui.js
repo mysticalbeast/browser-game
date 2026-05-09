@@ -3667,6 +3667,61 @@ function camelToSnakeCase(str) {
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
+function getSkillTreeNodeIcon(node) {
+  if (node.type === "category") {
+    const categoryIcons = {
+      minotaur: "🏹",
+      spells: "🔥",
+      economy: "💰",
+      necromancer: "☠️"
+    };
+
+    return categoryIcons[node.branch] || "⭐";
+  }
+
+  const skillIcons = {
+    sharpshooter: "🎯",
+    powerBolt: "🏹",
+    doubleStrike: "⚔️",
+    tripleStrike: "⚔️",
+    headshot: "💥",
+    strongerBullets: "🔩",
+
+    unlockFireball: "🔥",
+    fireballDamage: "🔥",
+    fireballCooldown: "⏱️",
+    unlockLightMagic: "✨",
+    lightMagicDamage: "✨",
+    lightMagicCooldown: "⏱️",
+    unlockHeavyMagic: "☄️",
+    heavyMagicDamage: "☄️",
+    heavyMagicCooldown: "⏱️",
+
+    deepPockets: "💰",
+    experiencedHunter: "📘",
+    materialistic: "💎",
+    gearingUp: "🛡️",
+    likeABoss: "👑",
+    lootHungry: "🎁",
+    uberDifficulty: "💀",
+
+    darkNovaDamage: "🌑",
+    darkNovaTargets: "🌌",
+    decay: "🦠",
+    deathEcho: "🔊",
+    overchannel: "⚡",
+    graveCalling: "🪦",
+    skeletonReach: "🦴",
+    skeletonMastery: "☠️",
+    walkingDead: "🧟",
+    reanimation: "♻️",
+    eliteSkeleton: "💀",
+    boneArmor: "🛡️"
+  };
+
+  return skillIcons[node.skill] || "⭐";
+}
+
 function renderSkillTree() {
   const content = document.getElementById("skillTreeContent");
   if (!content) return;
@@ -3874,7 +3929,7 @@ function renderSkillTree() {
     }
 
     nodeEl.innerHTML = `
-      ${!isCategory ? `<div class="skillNodeFrame"></div>` : ""}
+      <div class="skillNodeFrame"></div>
       <div class="skillNodeIcon"></div>
       <span class="skillNodeLabel">${node.label}</span>
       ${pointsText}
@@ -3882,20 +3937,10 @@ function renderSkillTree() {
 
     const iconEl = nodeEl.querySelector(".skillNodeIcon");
 
-    if (iconEl) {
-      if (isCategory) {
-        iconEl.style.backgroundImage = `url("assets/skilltree/category-${node.branch}.png")`;
-        iconEl.style.backgroundSize = "contain";
-        iconEl.style.backgroundPosition = "center";
-        iconEl.style.backgroundRepeat = "no-repeat";
-      } else {
-        const iconName = camelToSnakeCase(node.skill);
-        iconEl.style.backgroundImage = `url("assets/skilltree/skillicons/${iconName}.gif")`;
-        iconEl.style.backgroundSize = "contain";
-        iconEl.style.backgroundPosition = "center";
-        iconEl.style.backgroundRepeat = "no-repeat";
-      }
-    }
+if (iconEl) {
+  iconEl.style.backgroundImage = "none";
+  iconEl.textContent = getSkillTreeNodeIcon(node);
+}
 
     nodeEl.onclick = () => clickSkillNode(id);
 

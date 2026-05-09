@@ -9,6 +9,23 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function setGlobalChatStatus(message, className = "") {
+  const el = document.getElementById("globalChatStatus");
+  if (!el) return;
+
+  el.className = className;
+  el.textContent = message;
+
+  clearTimeout(window.globalChatStatusTimer);
+
+  if (message) {
+    window.globalChatStatusTimer = setTimeout(() => {
+      el.textContent = "";
+      el.className = "";
+    }, 2500);
+  }
+}
+
 async function fetchGlobalChat() {
   const box = document.getElementById("globalChatMessages");
   if (!box) return;
@@ -26,16 +43,39 @@ async function fetchGlobalChat() {
     lastChatMessageId = newestId;
 
     box.innerHTML = data.messages.map(msg => `
-      <div class="chatMessage">
-        <span class="chatUser">${escapeHtml(msg.username)}:</span>
-        <span class="chatText">${escapeHtml(msg.text)}</span>
-      </div>
-    `).join("");
+  <div class="chatMessage">
+    <span class="chatTime">[${formatChatTime(msg.createdAt)}]</span>
+    <span class="chatUser">${escapeHtml(msg.username)}:</span>
+    <span class="chatText">${escapeHtml(msg.text)}</span>
+  </div>
+`).join("");
 
     box.scrollTop = box.scrollHeight;
   } catch (error) {
     console.warn("Failed to fetch global chat:", error);
   }
+}
+
+function initializeGlobalChatMinimize() {
+  const button = document.getElementById("globalChatMinimizeBtn");
+  const box = document.getElementById("globalChatBox");
+
+  if (!button || !box) return;
+
+  button.onclick = () => {
+    const minimized = box.classList.toggle("minimized");
+
+    button.textContent = minimized ? "+" : "—";
+  };
+}
+
+function formatChatTime(timestamp) {
+  if (!timestamp) return "";
+
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 async function sendGlobalChatMessage() {
@@ -67,14 +107,15 @@ async function sendGlobalChatMessage() {
     const data = await response.json();
 
     if (!data.success) {
-      console.warn("Chat send failed:", data.message || data.error);
-      return;
-    }
+  setGlobalChatStatus(data.message || data.error || "Message failed.", "error");
+  return;
+}
 
     fetchGlobalChat();
   } catch (error) {
-    console.warn("Failed to send chat message:", error);
-  }
+  console.warn("Failed to send chat message:", error);
+  setGlobalChatStatus("Could not send message.", "error");
+}
 }
 
 function bindGlobalChat() {
@@ -102,4 +143,7 @@ function bindGlobalChat() {
   }, 3000);
 }
 
-window.addEventListener("load", bindGlobalChat);
+window.addEventListener("load", () => {
+  bindGlobalChat();
+  initializeGlobalChatMinimize();
+});
