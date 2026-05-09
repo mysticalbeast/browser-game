@@ -4428,3 +4428,26 @@ small {
 #cloudSaveStatus.failed {
   color: #ff6b6b;
 }
+
+#onlinePlayersBar {
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #7CFF7C;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+
+  background: transparent;
+
+  text-shadow:
+    0 0 4px rgba(124,255,124,0.45);
+
+  position: relative;
+  z-index: 5;
+
+  pointer-events: none;
+}

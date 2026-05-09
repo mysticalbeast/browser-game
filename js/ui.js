@@ -4945,6 +4945,22 @@ function getResearchMilestonesCompleted() {
   }, 0);
 }
 
+async function updateOnlinePlayersUI() {
+  try {
+    const response = await fetch(`${API_URL}/online`);
+    const data = await response.json();
+
+    const bar = document.getElementById("onlinePlayersBar");
+
+    if (!bar) return;
+
+    bar.textContent =
+      `🟢 Online Players: ${data.onlineCount || 0}`;
+  } catch (error) {
+    console.warn("Failed to load online players:", error);
+  }
+}
+
 async function renderScorePanel() {
   const box = document.getElementById("scoreContent");
   if (!box) return;
