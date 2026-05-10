@@ -1,21 +1,7 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const db = require("../database");
 
 const router = express.Router();
-
-const USERS_FILE = path.join(__dirname, "../data/users.json");
-
-function readJson(file, fallback) {
-  if (!fs.existsSync(file)) return fallback;
-
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return fallback;
-  }
-}
 
 function requireAdmin(req, res, next) {
   const adminSecret = req.headers["x-admin-secret"];
@@ -37,15 +23,23 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+const db = require("../database");
+
 router.delete("/save/:username", requireAdmin, async (req, res) => {
-  const username = String(req.params.username || "").trim();
-
   try {
-    const users = readJson(USERS_FILE, []);
+    const username = String(req.params.username || "").trim();
 
-    const user = users.find(
-      user => user.username.toLowerCase() === username.toLowerCase()
+    const userResult = await db.query(
+      `
+      SELECT id, username
+      FROM users
+      WHERE username_lower = $1
+      LIMIT 1
+      `,
+      [username.toLowerCase()]
     );
+
+    const user = userResult.rows[0];
 
     if (!user) {
       return res.status(404).json({
@@ -59,19 +53,19 @@ router.delete("/save/:username", requireAdmin, async (req, res) => {
       DELETE FROM player_saves
       WHERE user_id = $1
       `,
-      [String(user.id)]
+      [user.id]
     );
 
     res.json({
       success: true,
-      message: `Deleted PostgreSQL cloud save for ${user.username}.`
+      message: `Deleted cloud save for ${user.username}.`
     });
   } catch (error) {
     console.error("Admin delete save failed:", error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to delete cloud save."
+      message: "Failed to delete save."
     });
   }
 });
