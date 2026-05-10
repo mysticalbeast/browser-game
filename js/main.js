@@ -702,11 +702,19 @@ function initGame() {
     }
   }, 5000);
 
+  // =========================
+  // ONLINE HEARTBEAT
+  // =========================
+
   setInterval(() => {
     if (window.gamePausedForAuth) return;
 
     sendOnlineHeartbeat?.();
   }, 10000);
+
+  // =========================
+  // ONLINE PLAYER LIST
+  // =========================
 
   setInterval(() => {
     updateOnlinePlayersUI?.();
@@ -720,6 +728,16 @@ function initGame() {
     if (window.gamePausedForAuth) return;
 
     renderZonePlayers?.();
+  }, 5000);
+
+  // =========================
+  // GLOBAL EVENT SYNC
+  // =========================
+
+  setInterval(() => {
+    if (window.gamePausedForAuth) return;
+
+    syncGlobalEvents?.();
   }, 10000);
 
   sendOnlineHeartbeat?.();
@@ -727,6 +745,8 @@ function initGame() {
   updateOnlinePlayersUI?.();
 
   renderZonePlayers?.();
+
+  syncGlobalEvents?.();
 }
 
 initGame();

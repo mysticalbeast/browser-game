@@ -278,6 +278,30 @@ function finishSiegeEvent(reason = "ended") {
 // SIEGE GAMEPLAY
 // =====================
 
+async function syncGlobalEvents() {
+  try {
+    const response = await fetch(`${API_URL}/events`);
+    const data = await response.json();
+
+    if (!data.success || !data.events) return;
+
+    if (data.events.siege) {
+      state.siegeEvent = {
+        ...state.siegeEvent,
+        ...data.events.siege
+      };
+    }
+
+    updateSiegeNotification?.();
+
+    if (document.getElementById("travelPanel")?.style.display === "block") {
+      renderZoneList?.();
+    }
+  } catch (error) {
+    console.warn("Failed to sync global events:", error);
+  }
+}
+
 function updateSiegeGameplay(now = Date.now()) {
   if (!isSiegeEventActive() || !isInSiegeZone()) {
     clearSiegeVisuals();
@@ -741,21 +765,11 @@ function showSiegeResultPopup(data) {
 function updateSiegeEvent(now = Date.now()) {
   initializeSiegeEvent(now);
 
-  if (state.siegeEvent.active) {
-    if (now >= state.siegeEvent.endsAt) {
-      finishSiegeEvent("timerEnded");
-      return;
-    }
+  // Siege opening is now controlled globally by the backend /events route.
+  // Do not roll local random siege events per player.
 
-    return;
-  }
-
-  if (now < state.siegeEvent.nextCheckAt) return;
-
-  state.siegeEvent.nextCheckAt = now + SIEGE_EVENT_CHECK_MS;
-
-  if (Math.random() < SIEGE_EVENT_OPEN_CHANCE) {
-    openSiegeEvent(now);
+  if (state.siegeEvent.active && now >= state.siegeEvent.endsAt) {
+    finishSiegeEvent("timerEnded");
   }
 }
 
