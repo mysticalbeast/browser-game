@@ -255,6 +255,15 @@ router.post("/:userId", authMiddleware, async (req, res) => {
 
       finalSave.rebirthUpgrades =
         existingSave.rebirthUpgrades || {};
+
+      // Backend-owned stats
+      finalSave.stats = existingSave.stats || {};
+
+      // Backend-owned highest zone
+      finalSave.highestZone = Math.max(
+        Number(existingSave.highestZone || 1),
+        Number(finalSave.highestZone || 1)
+      );
     }
 
     finalSave.lastSeenAt = Date.now();

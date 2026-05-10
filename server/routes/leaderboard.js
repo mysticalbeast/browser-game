@@ -24,11 +24,9 @@ function readJson(file, fallback) {
 }
 
 function getHighestZoneName(save) {
-  if (save.currentZoneName) return save.currentZoneName;
-  if (save.zoneName) return save.zoneName;
-  if (save.currentZone) return `Zone ${save.currentZone}`;
-  if (save.zoneId) return `Zone ${save.zoneId}`;
-  return "Unknown";
+  const highestZone = Number(save.highestZone || save.zoneId || 1);
+
+  return `Zone ${highestZone}`;
 }
 
 function getResearchMilestones(save) {

@@ -684,7 +684,8 @@ router.post("/kill", authMiddleware, async (req, res) => {
       combatToken
     } = req.body || {};
 
-    const zone = ZONE_REWARDS[Number(zoneId)];
+    const safeZoneId = Number(zoneId);
+    const zone = ZONE_REWARDS[safeZoneId];
 
     if (!zone) {
       return res.status(400).json({
@@ -727,6 +728,11 @@ router.post("/kill", authMiddleware, async (req, res) => {
       });
     }
 
+    save.highestZone = Math.max(
+      Number(save.highestZone || 1),
+      safeZoneId
+    );
+
     const multipliers = getBackendRewardMultipliers(
       save,
       safeIsBoss,
@@ -751,7 +757,7 @@ router.post("/kill", authMiddleware, async (req, res) => {
     );
 
     const loot = rollBackendLoot({
-      zoneId: Number(zoneId),
+      zoneId: safeZoneId,
       isBoss: safeIsBoss,
       isUber: safeIsUber,
 
@@ -799,6 +805,18 @@ router.post("/kill", authMiddleware, async (req, res) => {
     save.stats.monstersKilled = Math.floor(
       Number(save.stats.monstersKilled || 0) + 1
     );
+
+    if (safeIsBoss) {
+      save.stats.bossesKilled = Math.floor(
+        Number(save.stats.bossesKilled || 0) + 1
+      );
+    }
+
+    if (safeIsUber) {
+      save.stats.ubersKilled = Math.floor(
+        Number(save.stats.ubersKilled || 0) + 1
+      );
+    }
 
     save.stats.goldEarned = Math.floor(
       Number(save.stats.goldEarned || 0) + gold
