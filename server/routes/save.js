@@ -329,7 +329,10 @@ router.get("/:userId", authMiddleware, async (req, res) => {
     const jsonSave = saves[userId] || null;
 
     if (jsonSave?.save) {
-      await savePlayerSave(userId, jsonSave.save);
+      await savePlayerSave(
+  userId,
+  sanitizePersistentSave(validation.save)
+);
     }
 
     res.json({
@@ -350,6 +353,36 @@ router.get("/:userId", authMiddleware, async (req, res) => {
     });
   }
 });
+
+function sanitizePersistentSave(save) {
+  const cleaned = { ...save };
+
+  delete cleaned.monsters;
+  delete cleaned.projectiles;
+  delete cleaned.floatingTexts;
+  delete cleaned.damageNumbers;
+  delete cleaned.notifications;
+  delete cleaned.combatToken;
+  delete cleaned.spawnRequestInProgress;
+  delete cleaned.lastSpawnRequestAt;
+  delete cleaned.isAwayForOffline;
+  delete cleaned.offlineGainProcessing;
+
+  delete cleaned.activeMonster;
+  delete cleaned.currentMonster;
+  delete cleaned.pendingReward;
+  delete cleaned.pendingLoot;
+  delete cleaned.pendingCloudSave;
+
+  delete cleaned.skeletons;
+  delete cleaned.arrows;
+  delete cleaned.fireballs;
+  delete cleaned.effects;
+  delete cleaned.vfx;
+  delete cleaned.animations;
+
+  return cleaned;
+}
 
 router.post("/:userId", authMiddleware, async (req, res) => {
   const { userId } = req.params;
@@ -373,7 +406,8 @@ router.post("/:userId", authMiddleware, async (req, res) => {
   const saves = loadSaves();
   const existingSave = saves[userId]?.save || null;
 
-  const validation = validateAndSanitizeSave(save, existingSave);
+const persistentSave = sanitizePersistentSave(save);
+const validation = validateAndSanitizeSave(persistentSave, existingSave);
 
   if (!validation.ok) {
     return res.status(400).json({
@@ -419,7 +453,7 @@ router.post("/:userId", authMiddleware, async (req, res) => {
 
 await savePlayerSave(
   userId,
-  validation.save
+  sanitizePersistentSave(validation.save)
 );
 
   res.json({
