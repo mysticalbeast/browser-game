@@ -3461,6 +3461,7 @@ function travelToZone(zoneId) {
 
 if (zoneId === SIEGE_ZONE_ID && isSiegeEventActive?.()) {
   state.siegeEvent.joined = true;
+  joinGlobalSiege?.();
 }
 
   if (zone.id !== OBSERVATORY_ZONE_ID && !state.visitedZones.includes(zone.id)) {

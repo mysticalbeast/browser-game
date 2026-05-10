@@ -76,6 +76,28 @@ function getEventNotificationRow() {
 // SIEGE CORE STATE
 // =====================
 
+async function joinGlobalSiege() {
+  const user = JSON.parse(localStorage.getItem("loggedInUser") || "null");
+
+  if (!user?.id) return;
+
+  try {
+    await fetch(`${API_URL}/events/siege/join`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId: user.id
+      })
+    });
+
+    syncGlobalEvents?.();
+  } catch (error) {
+    console.warn("Failed to join siege:", error);
+  }
+}
+
 function initializeSiegeEvent(now = Date.now()) {
   if (!state.siegeEvent) {
     state.siegeEvent = {

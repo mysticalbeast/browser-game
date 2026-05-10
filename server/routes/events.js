@@ -121,7 +121,7 @@ function resetSiege(now = Date.now()) {
 
 function startSiege(now = Date.now()) {
   const zone = SIEGE_ZONES[0];
-  const wallMaxHp = 10000;
+  const wallMaxHp = 1000;
 
   globalEvents.siege = {
     active: true,
@@ -135,7 +135,9 @@ function startSiege(now = Date.now()) {
 
     kills: 0,
     nextSpawnAt: now + 1000,
-    monsters: []
+    monsters: [],
+	monsters: [],
+    joinedPlayers: []
   };
 }
 
@@ -267,6 +269,46 @@ router.post("/siege/hit/:monsterId", (req, res) => {
     killed,
     siege,
     serverTime: Date.now()
+  });
+});
+
+router.post("/siege/join", (req, res) => {
+  tickGlobalEvents();
+
+  const siege = globalEvents.siege;
+
+  if (!siege.active) {
+    return res.status(400).json({
+      success: false,
+      message: "Siege is not active."
+    });
+  }
+
+  const userId = String(req.body?.userId || "");
+
+  if (!userId) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing userId."
+    });
+  }
+
+  if (!Array.isArray(siege.joinedPlayers)) {
+    siege.joinedPlayers = [];
+  }
+
+  const alreadyJoined = siege.joinedPlayers.includes(userId);
+
+  if (!alreadyJoined) {
+    siege.joinedPlayers.push(userId);
+
+    siege.wallMaxHp += 200;
+    siege.wallHp += 200;
+  }
+
+  res.json({
+    success: true,
+    siege
   });
 });
 
