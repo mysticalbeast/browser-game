@@ -17,28 +17,6 @@ const {
 
 const router = express.Router();
 
-async function saveCombatSession(token, session) {
-  await db.query(
-    `
-    INSERT INTO combat_sessions (
-      token,
-      session_data,
-      created_at
-    )
-    VALUES ($1, $2, $3)
-    ON CONFLICT (token)
-    DO UPDATE SET
-      session_data = EXCLUDED.session_data,
-      created_at = EXCLUDED.created_at
-    `,
-    [
-      token,
-      JSON.stringify(session),
-      Number(session.createdAt || Date.now())
-    ]
-  );
-}
-
 async function loadCombatSession(token) {
   const result = await db.query(
     `
