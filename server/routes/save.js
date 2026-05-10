@@ -167,7 +167,7 @@ function validateAndSanitizeSave(incomingSave, existingSave = null) {
   // DELTA VALIDATION
   // =========================
 
-  if (existingSave) {
+  if (false && existingSave) {
     const previousLevel = Number(existingSave.level || 1);
     const previousGold = Number(existingSave.gold || 0);
     const previousStars = Number(existingSave.stars || 0);
