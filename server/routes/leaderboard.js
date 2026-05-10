@@ -1,27 +1,12 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const db = require("../database");
 
 const router = express.Router();
-
-const USERS_FILE = path.join(__dirname, "../data/users.json");
 
 const LEADERBOARD_CACHE_MS = 10000;
 
 let cachedLeaderboard = [];
 let cachedAt = 0;
-
-function readJson(file, fallback) {
-  if (!fs.existsSync(file)) return fallback;
-
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch (error) {
-    console.error(`Failed to read ${file}:`, error);
-    return fallback;
-  }
-}
 
 function getHighestZoneName(save) {
   const highestZone = Number(save.highestZone || save.zoneId || 1);
@@ -45,19 +30,16 @@ function getResearchMilestones(save) {
 }
 
 async function buildLeaderboard() {
-  const users = readJson(USERS_FILE, []);
-
-  const usersById = new Map(
-    users.map(user => [String(user.id), user])
-  );
-
   const result = await db.query(`
     SELECT
-      user_id,
-      save_data,
-      updated_at
-    FROM player_saves
-    ORDER BY updated_at DESC
+      ps.user_id,
+      ps.save_data,
+      ps.updated_at,
+      u.username
+    FROM player_saves ps
+    LEFT JOIN users u
+      ON u.id = ps.user_id
+    ORDER BY ps.updated_at DESC
     LIMIT 500
   `);
 
@@ -65,11 +47,10 @@ async function buildLeaderboard() {
     .map(row => {
       const userId = String(row.user_id);
       const save = row.save_data || {};
-      const user = usersById.get(userId);
 
       return {
         userId,
-        username: user?.username || save.username || "Unknown",
+        username: row.username || save.username || "Unknown",
         level: Number(save.level || 1),
         exp: Number(save.exp || 0),
         gold: Number(save.gold || 0),
