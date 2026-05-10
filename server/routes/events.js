@@ -3,8 +3,8 @@ const express = require("express");
 const router = express.Router();
 
 const SIEGE_DURATION_MS = 15 * 60 * 1000;
-const SIEGE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
-const SIEGE_START_CHANCE = 0.20;
+const SIEGE_CHECK_INTERVAL_MS = 60 * 1000;
+const SIEGE_START_CHANCE = 1.00;
 
 let globalEvents = {
   siege: {
