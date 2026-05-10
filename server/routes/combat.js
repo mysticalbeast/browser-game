@@ -1,12 +1,19 @@
 const express = require("express");
 const crypto = require("crypto");
 const authMiddleware = require("../middleware/auth");
-const db = require("../database");
 
 const {
   loadPlayerSave,
   savePlayerSave
 } = require("../dbSaves");
+
+const {
+  saveCombatSession,
+  loadCombatSession,
+  deleteCombatSession,
+  markCombatSessionUsed,
+  cleanupExpiredCombatSessions
+} = require("../dbCombatSessions");
 
 const router = express.Router();
 
@@ -690,6 +697,8 @@ router.post("/spawn", authMiddleware, async (req, res) => {
       await savePlayerSave(req.user.id, save);
     }
 
+    await cleanupExpiredCombatSessions();
+
     const flags = rollBackendMonsterFlags(save);
     const combatToken = crypto.randomUUID();
 
@@ -720,186 +729,195 @@ router.post("/spawn", authMiddleware, async (req, res) => {
 });
 
 router.post("/kill", authMiddleware, async (req, res) => {
-  const {
-    zoneId,
-    combatToken
-  } = req.body || {};
+  try {
+    const {
+      zoneId,
+      combatToken
+    } = req.body || {};
 
-  const zone = ZONE_REWARDS[Number(zoneId)];
+    const zone = ZONE_REWARDS[Number(zoneId)];
 
-  if (!zone) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid zone."
-    });
-  }
+    if (!zone) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid zone."
+      });
+    }
 
     const session = await loadCombatSession(combatToken);
 
-  if (!session || session.userId !== req.user.id || session.used) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid or already used combat token."
-    });
-  }
+    if (!session || session.userId !== req.user.id || session.used) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or already used combat token."
+      });
+    }
 
-  const maxTokenAgeMs = 5 * 60 * 1000;
+    const maxTokenAgeMs = 5 * 60 * 1000;
 
-  if (Date.now() - Number(session.createdAt || 0) > maxTokenAgeMs) {
-    await deleteCombatSession(combatToken);
+    if (Date.now() - Number(session.createdAt || 0) > maxTokenAgeMs) {
+      await deleteCombatSession(combatToken);
 
-    return res.status(400).json({
-      success: false,
-      message: "Expired combat token."
-    });
-  }
+      return res.status(400).json({
+        success: false,
+        message: "Expired combat token."
+      });
+    }
 
-  await markCombatSessionUsed(combatToken, session);
+    await markCombatSessionUsed(combatToken, session);
 
-  const safeIsBoss = session.isBoss === true;
-  const safeIsUber = session.isUber === true;
+    const safeIsBoss = session.isBoss === true;
+    const safeIsUber = session.isUber === true;
 
     const save = await loadPlayerSave(req.user.id);
 
-  if (!save) {
-    return res.status(400).json({
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
+    }
+
+    const multipliers = getBackendRewardMultipliers(
+      save,
+      safeIsBoss,
+      safeIsUber
+    );
+
+    const bossMultiplier =
+      safeIsUber ? 100 :
+      safeIsBoss ? 25 :
+      1;
+
+    const gold = Math.floor(
+      rand(zone.gold[0], zone.gold[1]) *
+      bossMultiplier *
+      clampMultiplier(multipliers.goldMultiplier)
+    );
+
+    const exp = Math.floor(
+      rand(zone.exp[0], zone.exp[1]) *
+      bossMultiplier *
+      clampMultiplier(multipliers.expMultiplier)
+    );
+
+    const loot = rollBackendLoot({
+      zoneId: Number(zoneId),
+      isBoss: safeIsBoss,
+      isUber: safeIsUber,
+
+      essenceMultiplier: clampMultiplier(
+        multipliers.essenceMultiplier,
+        1,
+        100
+      ),
+
+      bossLootMultiplier: clampMultiplier(
+        multipliers.bossLootMultiplier,
+        1,
+        100
+      ),
+
+      equipmentDropMultiplier: clampMultiplier(
+        multipliers.equipmentDropMultiplier,
+        1,
+        100
+      ),
+
+      whetstoneDropMultiplier: clampMultiplier(
+        multipliers.whetstoneDropMultiplier,
+        1,
+        100
+      ),
+
+      doubleDropChance: multipliers.doubleDropChance,
+
+      extraUberLootRolls: multipliers.extraUberLootRolls
+    });
+
+    save.gold = Math.floor(
+      Number(save.gold || 0) + gold
+    );
+
+    save.exp = Math.floor(
+      Number(save.exp || 0) + exp
+    );
+
+    if (!save.stats || typeof save.stats !== "object") {
+      save.stats = {};
+    }
+
+    save.stats.monstersKilled = Math.floor(
+      Number(save.stats.monstersKilled || 0) + 1
+    );
+
+    save.stats.goldEarned = Math.floor(
+      Number(save.stats.goldEarned || 0) + gold
+    );
+
+    save.stats.expEarned = Math.floor(
+      Number(save.stats.expEarned || 0) + exp
+    );
+
+    if (!save.materials || typeof save.materials !== "object") {
+      save.materials = {};
+    }
+
+    Object.entries(loot.materials || {}).forEach(([key, amount]) => {
+      save.materials[key] = Math.floor(
+        Number(save.materials[key] || 0) + Number(amount || 0)
+      );
+    });
+
+    if (!save.inventory || typeof save.inventory !== "object") {
+      save.inventory = {};
+    }
+
+    if (loot.treasureChests > 0) {
+      save.inventory.treasureChest = Math.floor(
+        Number(save.inventory.treasureChest || 0) +
+        loot.treasureChests
+      );
+    }
+
+    if (loot.goldenTreasureChests > 0) {
+      save.inventory.goldenTreasureChest = Math.floor(
+        Number(save.inventory.goldenTreasureChest || 0) +
+        loot.goldenTreasureChests
+      );
+    }
+
+    if (!Array.isArray(save.equipmentInventory)) {
+      save.equipmentInventory = [];
+    }
+
+    if (
+      Array.isArray(loot.equipmentItems) &&
+      loot.equipmentItems.length > 0
+    ) {
+      save.equipmentInventory.push(...loot.equipmentItems);
+    }
+
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
+
+    res.json({
+      success: true,
+      reward: {
+        gold,
+        exp,
+        loot
+      }
+    });
+  } catch (error) {
+    console.error("Combat kill failed:", error);
+
+    res.status(500).json({
       success: false,
-      message: "No cloud save found."
+      message: "Combat kill failed."
     });
   }
-
-  const multipliers = getBackendRewardMultipliers(
-    save,
-    safeIsBoss,
-    safeIsUber
-  );
-
-  const bossMultiplier =
-    safeIsUber ? 100 :
-    safeIsBoss ? 25 :
-    1;
-
-  const gold = Math.floor(
-    rand(zone.gold[0], zone.gold[1]) *
-    bossMultiplier *
-    clampMultiplier(multipliers.goldMultiplier)
-  );
-
-  const exp = Math.floor(
-    rand(zone.exp[0], zone.exp[1]) *
-    bossMultiplier *
-    clampMultiplier(multipliers.expMultiplier)
-  );
-
-  const loot = rollBackendLoot({
-    zoneId: Number(zoneId),
-    isBoss: safeIsBoss,
-    isUber: safeIsUber,
-
-    essenceMultiplier: clampMultiplier(
-      multipliers.essenceMultiplier,
-      1,
-      100
-    ),
-
-    bossLootMultiplier: clampMultiplier(
-      multipliers.bossLootMultiplier,
-      1,
-      100
-    ),
-
-    equipmentDropMultiplier: clampMultiplier(
-      multipliers.equipmentDropMultiplier,
-      1,
-      100
-    ),
-
-    whetstoneDropMultiplier: clampMultiplier(
-      multipliers.whetstoneDropMultiplier,
-      1,
-      100
-    ),
-
-    doubleDropChance: multipliers.doubleDropChance,
-
-    extraUberLootRolls: multipliers.extraUberLootRolls
-  });
-
-  save.gold = Math.floor(
-    Number(save.gold || 0) + gold
-  );
-
-  save.exp = Math.floor(
-    Number(save.exp || 0) + exp
-  );
-
-  if (!save.stats || typeof save.stats !== "object") {
-    save.stats = {};
-  }
-
-  save.stats.monstersKilled = Math.floor(
-    Number(save.stats.monstersKilled || 0) + 1
-  );
-
-  save.stats.goldEarned = Math.floor(
-    Number(save.stats.goldEarned || 0) + gold
-  );
-
-  save.stats.expEarned = Math.floor(
-    Number(save.stats.expEarned || 0) + exp
-  );
-
-  if (!save.materials || typeof save.materials !== "object") {
-    save.materials = {};
-  }
-
-  Object.entries(loot.materials || {}).forEach(([key, amount]) => {
-    save.materials[key] = Math.floor(
-      Number(save.materials[key] || 0) + Number(amount || 0)
-    );
-  });
-
-  if (!save.inventory || typeof save.inventory !== "object") {
-    save.inventory = {};
-  }
-
-  if (loot.treasureChests > 0) {
-    save.inventory.treasureChest = Math.floor(
-      Number(save.inventory.treasureChest || 0) +
-      loot.treasureChests
-    );
-  }
-
-  if (loot.goldenTreasureChests > 0) {
-    save.inventory.goldenTreasureChest = Math.floor(
-      Number(save.inventory.goldenTreasureChest || 0) +
-      loot.goldenTreasureChests
-    );
-  }
-
-  if (!Array.isArray(save.equipmentInventory)) {
-    save.equipmentInventory = [];
-  }
-
-  if (
-    Array.isArray(loot.equipmentItems) &&
-    loot.equipmentItems.length > 0
-  ) {
-    save.equipmentInventory.push(...loot.equipmentItems);
-  }
-
-  save.lastSeenAt = Date.now();
-
-  await savePlayerSave(req.user.id, save);
-
-  res.json({
-    success: true,
-    reward: {
-      gold,
-      exp,
-      loot
-    }
-  });
 });
 
 module.exports = router;
