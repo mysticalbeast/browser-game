@@ -706,11 +706,11 @@ function initGame() {
     if (window.gamePausedForAuth) return;
 
     sendOnlineHeartbeat?.();
-  }, 30000);
+  }, 10000);
 
   setInterval(() => {
     updateOnlinePlayersUI?.();
-  }, 10000);
+  }, 5000);
 
   // =========================
   // ZONE PLAYER RENDERING
