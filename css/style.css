@@ -4932,3 +4932,9 @@ small {
   color: #ffe08a;
   border-color: rgba(255, 215, 80, 0.55);
 }
+
+.siegeMonster {
+  transition:
+    left 0.22s linear,
+    top 0.22s linear;
+}
