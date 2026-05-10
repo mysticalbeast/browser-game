@@ -16,6 +16,16 @@ async function initDatabase() {
       created_at BIGINT NOT NULL
     );
   `);
+  
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      username_lower TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    );
+  `);
 
   console.log("PostgreSQL tables initialized.");
 }

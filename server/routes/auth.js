@@ -1,12 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const fs = require("fs");
-const path = require("path");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const db = require("../database");
 
 const router = express.Router();
-
-const USERS_FILE = path.join(__dirname, "../data/users.json");
 
 function createToken(user) {
   return jwt.sign(
@@ -21,102 +19,140 @@ function createToken(user) {
   );
 }
 
-function loadUsers() {
-  if (!fs.existsSync(USERS_FILE)) {
-    return [];
-  }
-
-  return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
-}
-
-function saveUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-}
-
-router.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({
-      error: "Username and password required."
-    });
-  }
-
-  const users = loadUsers();
-
-  const existing = users.find(
-    user => user.username.toLowerCase() === username.toLowerCase()
+async function findUserByUsername(username) {
+  const result = await db.query(
+    `
+    SELECT
+      id,
+      username,
+      password_hash AS "passwordHash",
+      created_at AS "createdAt"
+    FROM users
+    WHERE username_lower = $1
+    LIMIT 1
+    `,
+    [String(username || "").toLowerCase()]
   );
 
-  if (existing) {
-    return res.status(400).json({
-      error: "Username already exists."
-    });
-  }
+  return result.rows[0] || null;
+}
 
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  const newUser = {
+async function createUser(username, passwordHash) {
+  const user = {
     id: crypto.randomUUID(),
-    username,
+    username: String(username).trim(),
     passwordHash,
     createdAt: Date.now()
   };
 
-  users.push(newUser);
+  await db.query(
+    `
+    INSERT INTO users (
+      id,
+      username,
+      username_lower,
+      password_hash,
+      created_at
+    )
+    VALUES ($1, $2, $3, $4, $5)
+    `,
+    [
+      user.id,
+      user.username,
+      user.username.toLowerCase(),
+      user.passwordHash,
+      user.createdAt
+    ]
+  );
 
-  saveUsers(users);
+  return user;
+}
 
-  const token = createToken(newUser);
+router.post("/register", async (req, res) => {
+  try {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "");
 
-res.json({
-  success: true,
-  message: "Account created.",
-  token,
-  user: {
-    id: newUser.id,
-    username: newUser.username
+    if (!username || !password) {
+      return res.status(400).json({
+        error: "Username and password required."
+      });
+    }
+
+    const existing = await findUserByUsername(username);
+
+    if (existing) {
+      return res.status(400).json({
+        error: "Username already exists."
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const newUser = await createUser(username, passwordHash);
+    const token = createToken(newUser);
+
+    res.json({
+      success: true,
+      message: "Account created.",
+      token,
+      user: {
+        id: newUser.id,
+        username: newUser.username
+      }
+    });
+  } catch (error) {
+    console.error("Register failed:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Registration failed."
+    });
   }
-});
 });
 
 router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+  try {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "");
 
-  const users = loadUsers();
+    const user = await findUserByUsername(username);
 
-  const user = users.find(
-    user => user.username.toLowerCase() === username.toLowerCase()
-  );
+    if (!user) {
+      return res.status(400).json({
+        error: "Invalid username or password."
+      });
+    }
 
-  if (!user) {
-    return res.status(400).json({
-      error: "Invalid username or password."
+    const validPassword = await bcrypt.compare(
+      password,
+      user.passwordHash
+    );
+
+    if (!validPassword) {
+      return res.status(400).json({
+        error: "Invalid username or password."
+      });
+    }
+
+    const token = createToken(user);
+
+    res.json({
+      success: true,
+      message: "Login successful.",
+      token,
+      user: {
+        id: user.id,
+        username: user.username
+      }
+    });
+  } catch (error) {
+    console.error("Login failed:", error);
+
+    res.status(500).json({
+      success: false,
+      error: "Login failed."
     });
   }
-
-  const validPassword = await bcrypt.compare(
-    password,
-    user.passwordHash
-  );
-
-  if (!validPassword) {
-    return res.status(400).json({
-      error: "Invalid username or password."
-    });
-  }
-
-  const token = createToken(user);
-
-res.json({
-  success: true,
-  message: "Login successful.",
-  token,
-  user: {
-    id: user.id,
-    username: user.username
-  }
-});
 });
 
 module.exports = router;
