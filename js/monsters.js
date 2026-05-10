@@ -77,52 +77,118 @@ function isMythicUberUnlocked() {
   return getUberDifficultyLevel() >= 10;
 }
 
-function createMonster() {
-  if (state.monsters.length >= getMaxMonsters()) return;
-
-  const zone = currentZone();
-
-  // Observatory / no-combat zones
-  if (zone.noMonsters || !zone.monsters || zone.monsters.length === 0) {
-    return;
+async function requestBackendMonsterSpawn() {
+  if (isLocalDevGame?.()) {
+    return {
+      combatToken: "local-dev-" + Math.random().toString(36).slice(2),
+      isBoss: false,
+      isUber: false,
+      isMythicUber: false
+    };
   }
 
-  const template = pickMonsterFromZone(zone);
-  if (!template) return;
+  const token = getAuthToken?.();
 
-  const rect = arena.getBoundingClientRect();
+  if (!token) {
+    return null;
+  }
 
-  const bossChance = 0.01 + (state.skills.likeABoss || 0) * 0.001;
-  const isBoss = Math.random() < bossChance;
+  try {
+    const response = await fetch(`${API_URL}/combat/spawn`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
 
-const uberLevel = state.skills.uberDifficulty || 0;
-const uberChance = uberLevel > 0 ? uberLevel * 0.005 : 0;
-const isUber = isBoss && Math.random() < uberChance;
+    const data = await response.json();
 
-const isMythicUber =
-  isUber &&
-  isMythicUberUnlocked() &&
-  Math.random() < 0.10;
+    if (!response.ok || !data.success) {
+      console.warn("Backend monster spawn failed:", data.message || data.error);
+      return null;
+    }
 
-const baseHp = monsterMaxHp(template);
-const hpMultiplier = isMythicUber ? 30 : isUber ? 15 : isBoss ? 5 : 1;
+    return data;
+  } catch (error) {
+    console.warn("Backend monster spawn request failed:", error);
+    return null;
+  }
+}
 
-const monster = {
-  id: crypto.randomUUID(),
-  name: isMythicUber ? `Mythic ${template.name}` : template.name,
-  sprite: template.sprite,
-  x: rand(80, rect.width - 80),
-  y: rand(80, rect.height - 220),
+async function createMonster() {
+  if (state.spawnRequestInProgress) return;
+  if (state.monsters.length >= getMaxMonsters()) return;
 
-  isBoss,
-  isUber,
-  isMythicUber,
-  maxHp: baseHp * hpMultiplier,
-  hp: baseHp * hpMultiplier
-};
+  state.spawnRequestInProgress = true;
 
-  state.monsters.push(monster);
-  renderMonster(monster);
+  try {
+    const zone = currentZone();
+
+    if (
+      zone.noMonsters ||
+      !zone.monsters ||
+      zone.monsters.length === 0
+    ) {
+      return;
+    }
+
+    const template = pickMonsterFromZone(zone);
+
+    if (!template) return;
+
+    const backendSpawn = await requestBackendMonsterSpawn();
+
+    if (!backendSpawn?.combatToken) {
+      console.warn("Missing combat token from backend.");
+      return;
+    }
+
+    const rect = arena.getBoundingClientRect();
+
+    const isBoss = backendSpawn.isBoss === true;
+    const isUber = backendSpawn.isUber === true;
+    const isMythicUber = backendSpawn.isMythicUber === true;
+
+    const baseHp = monsterMaxHp(template);
+
+    const hpMultiplier =
+      isMythicUber ? 30 :
+      isUber ? 15 :
+      isBoss ? 5 :
+      1;
+
+    const monster = {
+	  id: Math.random().toString(36).slice(2),
+      combatToken: backendSpawn.combatToken,
+
+      name: isMythicUber
+        ? `Mythic ${template.name}`
+        : template.name,
+
+      sprite: template.sprite,
+
+      x: rand(80, rect.width - 80),
+      y: rand(80, rect.height - 220),
+
+      isBoss,
+      isUber,
+      isMythicUber,
+
+      maxHp: baseHp * hpMultiplier,
+      hp: baseHp * hpMultiplier
+    };
+
+    state.monsters.push(monster);
+
+    renderMonster(monster);
+
+  } catch (error) {
+    console.error("createMonster failed:", error);
+
+  } finally {
+    state.spawnRequestInProgress = false;
+  }
 }
 
 function renderMonster(monster) {

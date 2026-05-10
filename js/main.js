@@ -387,10 +387,8 @@ function gameLoop() {
   
   const zone = currentZone();
 
-  if (!zone.noMonsters) {
-    while (state.monsters.length < getMaxMonsters()) {
-      createMonster();
-    }
+  if (!zone.noMonsters && state.monsters.length < getMaxMonsters()) {
+    createMonster();
   }
 
   const now = Date.now();
@@ -598,7 +596,7 @@ if (pendingCloudSave) {
   
   localStorage.removeItem("authToken");
 
-  window.gamePausedForAuth = true;
+  window.gamePausedForAuth = !isLocalDevGame?.();
 
   document.getElementById("authScreen").style.display = "flex";
 
@@ -633,8 +631,8 @@ function initGame() {
 
   initMonsterNameCache();
 
-  calculateOfflineGains();
-  renderOfflinePopup();
+  //calculateOfflineGains();
+  //renderOfflinePopup();
 
   initBackpack();
 
@@ -642,7 +640,7 @@ function initGame() {
 
   bindEvents();
 
-  setupOfflineGainTracking();
+  //setupOfflineGainTracking();
 
   initSummonVisual();
 

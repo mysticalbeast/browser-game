@@ -1,5 +1,13 @@
 const BASE_MAX_POTION_TIME_MS = 60 * 60 * 1000; // 1 hour
 
+function isLocalDevGame() {
+  return (
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1" ||
+    location.protocol === "file:"
+  );
+}
+
 function expNeeded(level = state.level) {
   return Math.floor(
     35 +
@@ -226,9 +234,6 @@ function setupOfflineGainTracking() {
       returnFromAway();
     }
   });
-
-  window.addEventListener("blur", markAway);
-  window.addEventListener("focus", returnFromAway);
 
   window.addEventListener("beforeunload", () => {
     markAway();

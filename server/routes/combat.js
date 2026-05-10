@@ -1,7 +1,251 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 const authMiddleware = require("../middleware/auth");
 
+const SAVES_FILE = path.join(__dirname, "../data/saves.json");
+const COMBAT_SESSIONS_FILE = path.join(__dirname, "../data/combatSessions.json");
+
 const router = express.Router();
+
+function loadCombatSessions() {
+  if (!fs.existsSync(COMBAT_SESSIONS_FILE)) return {};
+
+  try {
+    return JSON.parse(fs.readFileSync(COMBAT_SESSIONS_FILE, "utf8"));
+  } catch (error) {
+    console.error("Failed to read combatSessions.json:", error);
+    return {};
+  }
+}
+
+function saveCombatSessions(sessions) {
+  fs.writeFileSync(COMBAT_SESSIONS_FILE, JSON.stringify(sessions, null, 2));
+}
+
+function getUberDifficultyLevelFromSave(save) {
+  return Number(save?.skills?.uberDifficulty || 0);
+}
+
+function getLikeABossLevelFromSave(save) {
+  return Number(save?.skills?.likeABoss || 0);
+}
+
+function rollBackendMonsterFlags(save) {
+  const bossChance = 0.01 + getLikeABossLevelFromSave(save) * 0.001;
+
+  const uberLevel = getUberDifficultyLevelFromSave(save);
+  const uberChance = uberLevel > 0 ? uberLevel * 0.005 : 0;
+
+  const isBoss = Math.random() < bossChance;
+  const isUber = isBoss && Math.random() < uberChance;
+  const isMythicUber = isUber && uberLevel >= 10 && Math.random() < 0.10;
+
+  return {
+    isBoss,
+    isUber,
+    isMythicUber
+  };
+}
+
+function loadSaves() {
+  if (!fs.existsSync(SAVES_FILE)) return {};
+
+  try {
+    return JSON.parse(fs.readFileSync(SAVES_FILE, "utf8"));
+  } catch (error) {
+    console.error("Failed to read saves.json:", error);
+    return {};
+  }
+}
+
+function saveSaves(saves) {
+  fs.writeFileSync(SAVES_FILE, JSON.stringify(saves, null, 2));
+}
+
+function isPotionActive(save, key) {
+  return Number(save?.[key] || 0) > Date.now();
+}
+
+function getEnhancedItemStatValue(item, statKey, baseValue) {
+  const enhance = Number(item?.enhanceLevel || 0);
+
+  if (statKey === "critChance") {
+    return Number((baseValue + baseValue * enhance * 0.33).toFixed(2));
+  }
+
+  if (String(statKey).toLowerCase().includes("skill")) {
+    return baseValue + Math.floor(enhance * 0.75);
+  }
+
+  return Math.floor(baseValue * (1 + enhance * 0.33));
+}
+
+function getTotalEquipmentStat(save, statKey) {
+  let total = 0;
+
+  Object.values(save?.equipment || {}).forEach(item => {
+    if (!item || !item.stats) return;
+
+    const baseValue = Number(item.stats[statKey] || 0);
+    if (!baseValue) return;
+
+    total += getEnhancedItemStatValue(item, statKey, baseValue);
+  });
+
+  return Math.floor(total);
+}
+
+const RESEARCH_MILESTONES = [
+  { kills: 1000, bonus: { damage: 0.03 } },
+  { kills: 5000, bonus: { gold: 0.03 } },
+  { kills: 10000, bonus: { exp: 0.03 } },
+  { kills: 50000, bonus: { materials: 0.05 } },
+  { kills: 100000, bonus: { critDamage: 0.10 } },
+  { kills: 500000, bonus: { overkillSplash: 0.20 } },
+  { kills: 1000000, bonus: { rareDrops: 0.10 } }
+];
+
+function getTotalResearchBonus(save, stat) {
+  let total = 0;
+
+  Object.values(save?.monsterResearch || {}).forEach(progress => {
+    const unlocked = Array.isArray(progress?.unlocked) ? progress.unlocked : [];
+
+    unlocked.forEach(index => {
+      const bonus = RESEARCH_MILESTONES[index]?.bonus;
+      if (bonus?.[stat]) total += bonus[stat];
+    });
+  });
+
+  return total;
+}
+
+function getPhoenixBonusMultiplier(save) {
+  const phoenixLevel = Number(save?.constellations?.phoenix || 0);
+
+  if (phoenixLevel <= 0) return 1;
+  if (Number(save?.level || 1) > 100) return 1;
+
+  return 1 + phoenixLevel * 0.05;
+}
+
+function getFishingGoldGainBonus(save) {
+  return 1 + Number(save?.fishing?.shopUpgrades?.biggerPouches || 0) * 0.01;
+}
+
+function getFishingExpGainBonus(save) {
+  return 1 + Number(save?.fishing?.shopUpgrades?.shinierGems || 0) * 0.01;
+}
+
+function getUberDifficultyLevel(save) {
+  return Number(save?.skills?.uberDifficulty || 0);
+}
+
+function getUberLootBonusMultiplier(save) {
+  const level = getUberDifficultyLevel(save);
+
+  let bonus = 0;
+
+  if (level >= 2) bonus += 0.10;
+  if (level >= 6) bonus += 0.10;
+
+  return 1 + bonus;
+}
+
+function getUberExpBonusMultiplier(save) {
+  const level = getUberDifficultyLevel(save);
+
+  let bonus = 0;
+
+  if (level >= 3) bonus += 0.10;
+  if (level >= 7) bonus += 0.10;
+
+  return 1 + bonus;
+}
+
+function getUberExtraLootRolls(save) {
+  const level = getUberDifficultyLevel(save);
+
+  let rolls = 0;
+
+  if (level >= 5) rolls += 1;
+  if (level >= 9) rolls += 1;
+
+  return rolls;
+}
+
+function getBackendRewardMultipliers(save, isBoss, isUber) {
+  const skills = save?.skills || {};
+
+  const skillGoldBoost = 1 + Number(skills.deepPockets || 0) * 0.10;
+  const skillExpBoost = 1 + Number(skills.experiencedHunter || 0) * 0.10;
+
+  const potionGoldBoost = isPotionActive(save, "wealthUntil") ? 1.25 : 1;
+  const potionExpBoost = isPotionActive(save, "wisdomUntil") ? 1.25 : 1;
+
+  const researchGoldBoost = 1 + getTotalResearchBonus(save, "gold");
+  const researchExpBoost = 1 + getTotalResearchBonus(save, "exp");
+
+  const fishingGoldBoost = getFishingGoldGainBonus(save);
+  const fishingExpBoost = getFishingExpGainBonus(save);
+
+  const phoenixBoost = getPhoenixBonusMultiplier(save);
+
+  const skinBossBonus =
+    isBoss && save?.skins?.equipped?.minotaurArcher
+      ? 1
+      : 1;
+
+  const uberLootMultiplier = isUber ? getUberLootBonusMultiplier(save) : 1;
+  const uberExpMultiplier = isUber ? getUberExpBonusMultiplier(save) : 1;
+
+  return {
+    goldMultiplier:
+      skillGoldBoost *
+      potionGoldBoost *
+      researchGoldBoost *
+      phoenixBoost *
+      fishingGoldBoost *
+      skinBossBonus *
+      uberLootMultiplier,
+
+    expMultiplier:
+      skillExpBoost *
+      potionExpBoost *
+      researchExpBoost *
+      phoenixBoost *
+      fishingExpBoost *
+      skinBossBonus *
+      uberExpMultiplier,
+
+    essenceMultiplier:
+      (1 + Number(skills.materialistic || 0) * 0.02) *
+      (1 + getTotalResearchBonus(save, "materials")),
+
+    bossLootMultiplier:
+      isBoss
+        ? 1 + Number(skills.lootHungry || 0) * 0.05
+        : 1,
+
+    equipmentDropMultiplier:
+      (1 + Number(skills.gearingUp || 0) * 0.10) *
+      (1 + getTotalResearchBonus(save, "rareDrops")) *
+      (1 + getTotalEquipmentStat(save, "lootChance") / 100),
+
+    whetstoneDropMultiplier:
+      (1 + getTotalResearchBonus(save, "rareDrops")) *
+      (1 + getTotalEquipmentStat(save, "lootChance") / 100) *
+      (1 + getTotalEquipmentStat(save, "whetstoneChance") / 100),
+
+    doubleDropChance:
+      Math.max(0, Math.min(1, getTotalEquipmentStat(save, "doubleDrop") / 100)),
+
+    extraUberLootRolls:
+      isUber ? getUberExtraLootRolls(save) : 0
+  };
+}
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -385,20 +629,47 @@ function rollBackendLoot(options) {
   return loot;
 }
 
+router.post("/spawn", authMiddleware, (req, res) => {
+  const saves = loadSaves();
+  const userSaveWrapper = saves[req.user.id];
+
+  if (!userSaveWrapper?.save) {
+    return res.status(400).json({
+      success: false,
+      message: "No cloud save found."
+    });
+  }
+
+  const save = userSaveWrapper.save;
+  const flags = rollBackendMonsterFlags(save);
+
+  const combatToken = crypto.randomUUID();
+  const sessions = loadCombatSessions();
+
+  sessions[combatToken] = {
+    userId: req.user.id,
+    createdAt: Date.now(),
+    used: false,
+    isBoss: flags.isBoss,
+    isUber: flags.isUber,
+    isMythicUber: flags.isMythicUber
+  };
+
+  saveCombatSessions(sessions);
+
+  res.json({
+    success: true,
+    combatToken,
+    isBoss: flags.isBoss,
+    isUber: flags.isUber,
+    isMythicUber: flags.isMythicUber
+  });
+});
+
 router.post("/kill", authMiddleware, (req, res) => {
   const {
     zoneId,
-    isBoss,
-    isUber,
-    goldMultiplier,
-    expMultiplier,
-
-    essenceMultiplier,
-    bossLootMultiplier,
-    equipmentDropMultiplier,
-    whetstoneDropMultiplier,
-    doubleDropChance,
-    extraUberLootRolls
+    combatToken
   } = req.body || {};
 
   const zone = ZONE_REWARDS[Number(zoneId)];
@@ -410,41 +681,175 @@ router.post("/kill", authMiddleware, (req, res) => {
     });
   }
 
-  const bossMultiplier = isUber ? 100 : isBoss ? 25 : 1;
+  const sessions = loadCombatSessions();
+  const session = sessions[combatToken];
 
-  const safeGoldMultiplier = clampMultiplier(goldMultiplier);
-  const safeExpMultiplier = clampMultiplier(expMultiplier);
+  if (!session || session.userId !== req.user.id || session.used) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid or already used combat token."
+    });
+  }
 
-  const safeEssenceMultiplier = clampMultiplier(essenceMultiplier, 1, 100);
-  const safeBossLootMultiplier = clampMultiplier(bossLootMultiplier, 1, 100);
-  const safeEquipmentDropMultiplier = clampMultiplier(equipmentDropMultiplier, 1, 100);
-  const safeWhetstoneDropMultiplier = clampMultiplier(whetstoneDropMultiplier, 1, 100);
-  const safeDoubleDropChance = Math.max(0, Math.min(1, Number(doubleDropChance) || 0));
-  const safeExtraUberLootRolls = Math.max(0, Math.min(5, Math.floor(Number(extraUberLootRolls) || 0)));
+  const maxTokenAgeMs = 5 * 60 * 1000;
+
+  if (Date.now() - Number(session.createdAt || 0) > maxTokenAgeMs) {
+    delete sessions[combatToken];
+    saveCombatSessions(sessions);
+
+    return res.status(400).json({
+      success: false,
+      message: "Expired combat token."
+    });
+  }
+
+  session.used = true;
+  sessions[combatToken] = session;
+  saveCombatSessions(sessions);
+
+  const safeIsBoss = session.isBoss === true;
+  const safeIsUber = session.isUber === true;
+
+  const saves = loadSaves();
+  const userSaveWrapper = saves[req.user.id];
+
+  if (!userSaveWrapper?.save) {
+    return res.status(400).json({
+      success: false,
+      message: "No cloud save found."
+    });
+  }
+
+  const save = userSaveWrapper.save;
+
+  const multipliers = getBackendRewardMultipliers(
+    save,
+    safeIsBoss,
+    safeIsUber
+  );
+
+  const bossMultiplier =
+    safeIsUber ? 100 :
+    safeIsBoss ? 25 :
+    1;
 
   const gold = Math.floor(
     rand(zone.gold[0], zone.gold[1]) *
     bossMultiplier *
-    safeGoldMultiplier
+    clampMultiplier(multipliers.goldMultiplier)
   );
 
   const exp = Math.floor(
     rand(zone.exp[0], zone.exp[1]) *
     bossMultiplier *
-    safeExpMultiplier
+    clampMultiplier(multipliers.expMultiplier)
   );
 
   const loot = rollBackendLoot({
     zoneId: Number(zoneId),
-    isBoss: isBoss === true,
-    isUber: isUber === true,
-    essenceMultiplier: safeEssenceMultiplier,
-    bossLootMultiplier: safeBossLootMultiplier,
-    equipmentDropMultiplier: safeEquipmentDropMultiplier,
-    whetstoneDropMultiplier: safeWhetstoneDropMultiplier,
-    doubleDropChance: safeDoubleDropChance,
-    extraUberLootRolls: safeExtraUberLootRolls
+    isBoss: safeIsBoss,
+    isUber: safeIsUber,
+
+    essenceMultiplier: clampMultiplier(
+      multipliers.essenceMultiplier,
+      1,
+      100
+    ),
+
+    bossLootMultiplier: clampMultiplier(
+      multipliers.bossLootMultiplier,
+      1,
+      100
+    ),
+
+    equipmentDropMultiplier: clampMultiplier(
+      multipliers.equipmentDropMultiplier,
+      1,
+      100
+    ),
+
+    whetstoneDropMultiplier: clampMultiplier(
+      multipliers.whetstoneDropMultiplier,
+      1,
+      100
+    ),
+
+    doubleDropChance: multipliers.doubleDropChance,
+
+    extraUberLootRolls: multipliers.extraUberLootRolls
   });
+
+  save.gold = Math.floor(
+    Number(save.gold || 0) + gold
+  );
+
+  save.exp = Math.floor(
+    Number(save.exp || 0) + exp
+  );
+
+  if (!save.stats || typeof save.stats !== "object") {
+    save.stats = {};
+  }
+
+  save.stats.monstersKilled = Math.floor(
+    Number(save.stats.monstersKilled || 0) + 1
+  );
+
+  save.stats.goldEarned = Math.floor(
+    Number(save.stats.goldEarned || 0) + gold
+  );
+
+  save.stats.expEarned = Math.floor(
+    Number(save.stats.expEarned || 0) + exp
+  );
+
+  if (!save.materials || typeof save.materials !== "object") {
+    save.materials = {};
+  }
+
+  Object.entries(loot.materials || {}).forEach(([key, amount]) => {
+    save.materials[key] = Math.floor(
+      Number(save.materials[key] || 0) + Number(amount || 0)
+    );
+  });
+
+  if (!save.inventory || typeof save.inventory !== "object") {
+    save.inventory = {};
+  }
+
+  if (loot.treasureChests > 0) {
+    save.inventory.treasureChest = Math.floor(
+      Number(save.inventory.treasureChest || 0) +
+      loot.treasureChests
+    );
+  }
+
+  if (loot.goldenTreasureChests > 0) {
+    save.inventory.goldenTreasureChest = Math.floor(
+      Number(save.inventory.goldenTreasureChest || 0) +
+      loot.goldenTreasureChests
+    );
+  }
+
+  if (!Array.isArray(save.equipmentInventory)) {
+    save.equipmentInventory = [];
+  }
+
+  if (
+    Array.isArray(loot.equipmentItems) &&
+    loot.equipmentItems.length > 0
+  ) {
+    save.equipmentInventory.push(...loot.equipmentItems);
+  }
+
+  save.lastSeenAt = Date.now();
+
+  saves[req.user.id] = {
+    save,
+    updatedAt: Date.now()
+  };
+
+  saveSaves(saves);
 
   res.json({
     success: true,

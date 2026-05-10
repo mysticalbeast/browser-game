@@ -4,7 +4,7 @@ function getAuthToken() {
   return localStorage.getItem("authToken");
 }
 
-window.gamePausedForAuth = true;
+window.gamePausedForAuth = !isLocalDevGame?.();
 
 function isAdminUser(user) {
   return user?.username === "Carl";
@@ -172,6 +172,14 @@ function bindAuthUI() {
     setCloudSaveStatus?.("Ready", "saved");
   } else {
     applyAdminVisibility();
+
+    if (isLocalDevGame?.()) {
+      window.gamePausedForAuth = false;
+      document.getElementById("authScreen").style.display = "none";
+      setDisplayedPlayerName?.("LocalHero");
+      return;
+    }
+
     document.getElementById("authScreen").style.display = "flex";
   }
 }

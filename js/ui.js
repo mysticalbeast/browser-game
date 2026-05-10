@@ -292,14 +292,6 @@ function handleStarCatchup() {
   lastStarInactiveAt = now;
 }
 
-window.addEventListener("blur", () => {
-  lastStarInactiveAt = Date.now();
-});
-
-window.addEventListener("focus", () => {
-  handleStarCatchup();
-});
-
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     lastStarInactiveAt = Date.now();
@@ -570,43 +562,6 @@ function rollStarYieldMultiplier() {
 }
 
 let lastStarFocusTime = Date.now();
-
-window.addEventListener("blur", () => {
-  lastStarFocusTime = Date.now();
-});
-
-window.addEventListener("focus", () => {
-  const now = Date.now();
-  const missedSeconds = Math.floor((now - lastStarFocusTime) / 1000);
-
-  if (missedSeconds <= 2) return;
-
-  const starsPerSecond = getRecentStarsPerSecond?.() || 0;
-  const gained = Math.floor(starsPerSecond * missedSeconds);
-
-  if (gained > 0) {
-    state.stars = (state.stars || 0) + gained;
-
-    if (!state.stats) state.stats = {};
-    state.stats.starsCollected = (state.stats.starsCollected || 0) + gained;
-    state.stats.starsEarned = (state.stats.starsEarned || 0) + gained;
-
-    showFilterNotification(
-      "system",
-      `⭐ Background star catch-up: +${fmt(gained)} Stars.`
-    );
-
-    updateUI();
-
-    if (document.getElementById("scorePanel")?.style.display === "block") {
-      renderScorePanel();
-    }
-
-    saveGame();
-  }
-
-  lastStarFocusTime = now;
-});
 
 function spawnFallingStar() {
   const currentZoneId = getCurrentZoneId();
@@ -932,6 +887,8 @@ function claimOfflineRewards() {
   saveGame();
 }
 
+window.claimOfflineRewards = claimOfflineRewards;
+
 function renderOfflinePopup() {
   const data = state.offlineSummary;
   if (!data) return;
@@ -1051,12 +1008,19 @@ function renderOfflinePopup() {
         <span>${fmt(estimatedKills)}</span>
       </div>
 
-      <button class="afkContinueBtn" onclick="claimOfflineRewards()">
-        Claim
-      </button>
+      <button class="afkContinueBtn" id="claimOfflineRewardsBtn">
+  Claim
+</button>
 
     </div>
   `;
+  
+    const claimBtn = document.getElementById("claimOfflineRewardsBtn");
+
+  if (claimBtn) {
+    claimBtn.onclick = claimOfflineRewards;
+  }
+  
 }
 
 function recordKillForOfflineRate() {

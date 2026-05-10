@@ -339,6 +339,8 @@ const state = {
 
   monsterResearch: {},
 
+spawnRequestInProgress: false,
+
 weaponStarLevel: 0,
 
 dracoWeaponScaling: 0,

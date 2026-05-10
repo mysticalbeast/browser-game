@@ -1080,6 +1080,37 @@ function renderResearchGridOnly() {
 }
 
 async function requestBackendKillReward(monster, multipliers) {
+  if (isLocalDevGame?.()) {
+    const zone = currentZone();
+
+    const bossMultiplier =
+      monster.isUber ? 100 :
+      monster.isBoss ? 25 :
+      1;
+
+    return {
+      gold: Math.floor(
+        rand(zone.gold[0], zone.gold[1]) *
+        bossMultiplier *
+        (multipliers?.goldMultiplier || 1)
+      ),
+
+      exp: Math.floor(
+        rand(zone.exp[0], zone.exp[1]) *
+        bossMultiplier *
+        (multipliers?.expMultiplier || 1)
+      ),
+
+      loot: {
+        materials: {},
+        equipmentDrops: 0,
+        treasureChests: 0,
+        goldenTreasureChests: 0,
+        equipmentItems: []
+      }
+    };
+  }
+
   const token = getAuthToken?.();
 
   if (!token) {
@@ -1095,18 +1126,7 @@ async function requestBackendKillReward(monster, multipliers) {
       },
       body: JSON.stringify({
         zoneId: state.zoneId,
-        isBoss: monster.isBoss === true,
-        isUber: monster.isUber === true,
-
-        goldMultiplier: multipliers.goldMultiplier,
-        expMultiplier: multipliers.expMultiplier,
-
-        essenceMultiplier: multipliers.essenceMultiplier,
-        bossLootMultiplier: multipliers.bossLootMultiplier,
-        equipmentDropMultiplier: multipliers.equipmentDropMultiplier,
-        whetstoneDropMultiplier: multipliers.whetstoneDropMultiplier,
-        doubleDropChance: multipliers.doubleDropChance,
-        extraUberLootRolls: multipliers.extraUberLootRolls
+        combatToken: monster.combatToken
       })
     });
 
