@@ -308,11 +308,25 @@ async function syncGlobalEvents() {
     if (!data.success || !data.events) return;
 
     if (data.events.siege) {
-      const wasActive = state.siegeEvent?.active === true;
+      const previousSiege = state.siegeEvent || {};
+      const serverSiege = data.events.siege;
+
+      const wasActive = previousSiege.active === true;
+      const serverIsInactive = serverSiege.active !== true;
+
+      const playerWasInSiege =
+        previousSiege.joined === true ||
+        getCurrentZoneId?.() === SIEGE_ZONE_ID;
+
+      if (wasActive && serverIsInactive && playerWasInSiege) {
+        const reason = serverSiege.lastResult?.reason || "timerEnded";
+
+        finishSiegeEvent(reason);
+      }
 
       state.siegeEvent = {
         ...state.siegeEvent,
-        ...data.events.siege
+        ...serverSiege
       };
 
       if (!state.siegeEvent.active && wasActive) {

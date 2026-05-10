@@ -102,7 +102,7 @@ function getSiegeMonsterTemplate(siege) {
   };
 }
 
-function resetSiege(now = Date.now()) {
+function resetSiege(now = Date.now(), reason = "timerEnded", previousSiege = null) {
   globalEvents.siege = {
     active: false,
     zoneId: null,
@@ -115,7 +115,14 @@ function resetSiege(now = Date.now()) {
 
     kills: 0,
     nextSpawnAt: 0,
-    monsters: []
+    monsters: [],
+    joinedPlayers: [],
+
+    lastResult: previousSiege ? {
+      reason,
+      endedAt: now,
+      kills: previousSiege.kills || 0
+    } : null
   };
 }
 
@@ -199,10 +206,11 @@ function tickGlobalEvents() {
   const siege = globalEvents.siege;
 
   if (siege.active) {
-    if (now >= siege.endsAt || siege.wallHp <= 0) {
-      resetSiege(now);
-      return;
-    }
+if (now >= siege.endsAt || siege.wallHp <= 0) {
+  const reason = siege.wallHp <= 0 ? "wallDestroyed" : "timerEnded";
+  resetSiege(now, reason, siege);
+  return;
+}
 
     if (now >= siege.nextSpawnAt) {
       spawnSiegeMonster(now);
