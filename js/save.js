@@ -88,6 +88,7 @@ function scheduleCloudSave(save) {
 
 async function uploadCloudSave(save) {
   const user = getLoggedInUser();
+
   if (!user?.id) {
     setCloudSaveStatus("Local only");
     return;
@@ -100,19 +101,28 @@ async function uploadCloudSave(save) {
     const response = await fetch(`${API_URL}/save/${user.id}`, {
       method: "POST",
       headers: {
-  "Content-Type": "application/json",
-  "Authorization": `Bearer ${getAuthToken()}`
-},
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${getAuthToken()}`
+      },
       body: JSON.stringify({ save })
     });
 
-    if (!response.ok) {
-      throw new Error("Cloud save request failed.");
+    let data = null;
+
+    try {
+      data = await response.json();
+    } catch (error) {
+      data = null;
+    }
+
+    if (!response.ok || !data?.success) {
+      console.warn("Cloud save rejected:", data?.message || data?.error || response.status);
+      throw new Error(data?.message || "Cloud save request failed.");
     }
 
     setCloudSaveStatus("Saved", "saved");
   } catch (error) {
-    console.warn("Cloud save failed:", error);
+    console.warn("Cloud save failed:", error.message || error);
     setCloudSaveStatus("Failed", "failed");
   }
 }

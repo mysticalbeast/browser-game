@@ -106,9 +106,10 @@ function validateAndSanitizeSave(incomingSave, existingSave = null) {
   save.skills = sanitizeNumberMap(skills, 1000);
 
   const spentSkillPoints = getSpentSkillPoints(save.skills);
-  const allowedSkillPoints = getAllowedSkillPointsForLevel(save.level);
 
-  if (spentSkillPoints + save.skillPoints > allowedSkillPoints + 20) {
+  const maxTotalSkillPoints = 100000;
+
+  if (spentSkillPoints + save.skillPoints > maxTotalSkillPoints) {
     return {
       ok: false,
       message: "Save rejected: impossible skill point total."
@@ -264,29 +265,9 @@ function validateAndSanitizeSave(incomingSave, existingSave = null) {
 
     // =========================
     // SKILL POINT DELTA
+    // Disabled during backend migration.
+    // Skill purchases and reward sources are still partly frontend-controlled.
     // =========================
-
-    const previousSpentSkillPoints =
-      getSpentSkillPoints(existingSave.skills || {});
-
-    const previousUnspentSkillPoints =
-      Number(existingSave.skillPoints || 0);
-
-    const previousTotalSkillPoints =
-      previousSpentSkillPoints + previousUnspentSkillPoints;
-
-    const currentTotalSkillPoints =
-      spentSkillPoints + save.skillPoints;
-
-    const maxSkillPointGain =
-      Math.max(10, Math.ceil(elapsedMinutes / 3) + 5);
-
-    if ((currentTotalSkillPoints - previousTotalSkillPoints) > maxSkillPointGain) {
-      return {
-        ok: false,
-        message: "Save rejected: impossible skill point gain."
-      };
-    }
 
     // =========================
     // REBIRTH COIN DELTA
