@@ -379,6 +379,8 @@ router.post("/purchase", authMiddleware, async (req, res) => {
       save.unlockedNodes = ["minotaur_category"];
     }
 
+	syncBackendSkillPoints(save);
+
     const check = canPurchaseSkill(save, skillKey);
 
     if (!check.ok) {
