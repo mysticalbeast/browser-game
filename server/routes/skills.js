@@ -1,11 +1,12 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const authMiddleware = require("../middleware/auth");
 
-const router = express.Router();
+const {
+  loadPlayerSave,
+  savePlayerSave
+} = require("../dbSaves");
 
-const SAVES_FILE = path.join(__dirname, "../data/saves.json");
+const router = express.Router();
 
 const SKILL_DEFS = {
   sharpshooter: { max: 10, branch: "minotaur" },
@@ -138,20 +139,6 @@ const MODIFIER_PAIRS = [
   ["guillotine", "bleedingCritical"],
   ["overkill", "ricochet"]
 ];
-
-function loadSaves() {
-  if (!fs.existsSync(SAVES_FILE)) return {};
-
-  try {
-    return JSON.parse(fs.readFileSync(SAVES_FILE, "utf8"));
-  } catch {
-    return {};
-  }
-}
-
-function saveSaves(saves) {
-  fs.writeFileSync(SAVES_FILE, JSON.stringify(saves, null, 2));
-}
 
 function getSkillMax(save, skillKey) {
   const def = SKILL_DEFS[skillKey];
@@ -344,122 +331,130 @@ function hasChildSkillUnlocked(save, skillKey) {
   });
 }
 
-router.post("/purchase", authMiddleware, (req, res) => {
+router.post("/purchase", authMiddleware, async (req, res) => {
   const nodeId = String(req.body?.nodeId || "");
   const skillKey = NODE_TO_SKILL[nodeId] || nodeId;
 
-  const saves = loadSaves();
-  const wrapper = saves[req.user.id];
+  try {
+    const save = await loadPlayerSave(req.user.id);
 
-  if (!wrapper?.save) {
-    return res.status(400).json({
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
+    }
+
+    if (!save.skills || typeof save.skills !== "object") {
+      save.skills = {};
+    }
+
+    if (!Array.isArray(save.unlockedNodes)) {
+      save.unlockedNodes = ["minotaur_category"];
+    }
+
+    const check = canPurchaseSkill(save, skillKey);
+
+    if (!check.ok) {
+      return res.status(400).json({
+        success: false,
+        message: check.message
+      });
+    }
+
+    save.skillPoints = Math.max(
+      0,
+      Math.floor(Number(save.skillPoints || 0) - 1)
+    );
+
+    save.skills[skillKey] = Math.floor(
+      Number(save.skills[skillKey] || 0) + 1
+    );
+
+    if (!save.unlockedNodes.includes(nodeId)) {
+      save.unlockedNodes.push(nodeId);
+    }
+
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
+
+    res.json({
+      success: true,
+      skillPoints: save.skillPoints,
+      skills: save.skills,
+      unlockedNodes: save.unlockedNodes
+    });
+  } catch (error) {
+    console.error("Skill purchase failed:", error);
+
+    res.status(500).json({
       success: false,
-      message: "No cloud save found."
+      message: "Skill purchase failed."
     });
   }
-
-  const save = wrapper.save;
-
-  if (!save.skills || typeof save.skills !== "object") {
-    save.skills = {};
-  }
-
-  if (!Array.isArray(save.unlockedNodes)) {
-    save.unlockedNodes = ["minotaur_category"];
-  }
-
-  const check = canPurchaseSkill(save, skillKey);
-
-  if (!check.ok) {
-    return res.status(400).json({
-      success: false,
-      message: check.message
-    });
-  }
-
-  save.skillPoints = Math.max(0, Math.floor(Number(save.skillPoints || 0) - 1));
-  save.skills[skillKey] = Math.floor(Number(save.skills[skillKey] || 0) + 1);
-
-  if (!save.unlockedNodes.includes(nodeId)) {
-    save.unlockedNodes.push(nodeId);
-  }
-
-  save.lastSeenAt = Date.now();
-
-  saves[req.user.id] = {
-    save,
-    updatedAt: Date.now()
-  };
-
-  saveSaves(saves);
-
-  res.json({
-    success: true,
-    skillPoints: save.skillPoints,
-    skills: save.skills,
-    unlockedNodes: save.unlockedNodes
-  });
 });
 
-router.post("/refund", authMiddleware, (req, res) => {
+router.post("/refund", authMiddleware, async (req, res) => {
   const nodeId = String(req.body?.nodeId || "");
   const skillKey = NODE_TO_SKILL[nodeId] || nodeId;
 
-  const saves = loadSaves();
-  const wrapper = saves[req.user.id];
+  try {
+    const save = await loadPlayerSave(req.user.id);
 
-  if (!wrapper?.save) {
-    return res.status(400).json({
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
+    }
+
+    if (!save.skills || typeof save.skills !== "object") {
+      save.skills = {};
+    }
+
+    const current = Math.floor(Number(save.skills[skillKey] || 0));
+
+    if (current <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Skill is not purchased."
+      });
+    }
+
+    if (hasChildSkillUnlocked(save, skillKey)) {
+      return res.status(400).json({
+        success: false,
+        message: "Refund child skills first."
+      });
+    }
+
+    save.skills[skillKey] = current - 1;
+
+    if (save.skills[skillKey] <= 0) {
+      delete save.skills[skillKey];
+    }
+
+    save.skillPoints = Math.floor(Number(save.skillPoints || 0) + 1);
+    save.unlockedNodes = rebuildUnlockedNodesFromSkills(save);
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
+
+    res.json({
+      success: true,
+      skillPoints: save.skillPoints,
+      skills: save.skills,
+      unlockedNodes: save.unlockedNodes
+    });
+  } catch (error) {
+    console.error("Skill refund failed:", error);
+
+    res.status(500).json({
       success: false,
-      message: "No cloud save found."
+      message: "Skill refund failed."
     });
   }
-
-  const save = wrapper.save;
-
-  if (!save.skills || typeof save.skills !== "object") {
-    save.skills = {};
-  }
-
-  const current = Math.floor(Number(save.skills[skillKey] || 0));
-
-  if (current <= 0) {
-    return res.status(400).json({
-      success: false,
-      message: "Skill is not purchased."
-    });
-  }
-
-  if (hasChildSkillUnlocked(save, skillKey)) {
-    return res.status(400).json({
-      success: false,
-      message: "Refund child skills first."
-    });
-  }
-
-  save.skills[skillKey] = current - 1;
-
-  if (save.skills[skillKey] <= 0) {
-    delete save.skills[skillKey];
-  }
-
-  save.skillPoints = Math.floor(Number(save.skillPoints || 0) + 1);
-  save.unlockedNodes = rebuildUnlockedNodesFromSkills(save);
-  save.lastSeenAt = Date.now();
-
-  saves[req.user.id] = {
-    save,
-    updatedAt: Date.now()
-  };
-
-  saveSaves(saves);
-
-  res.json({
-    success: true,
-    skillPoints: save.skillPoints,
-    skills: save.skills,
-    unlockedNodes: save.unlockedNodes
-  });
 });
 
 module.exports = router;
