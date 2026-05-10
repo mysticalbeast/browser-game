@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const initDatabase = require("./initDatabase");
+
 const authRoutes = require("./routes/auth");
 const saveRoutes = require("./routes/save");
 const leaderboardRoutes = require("./routes/leaderboard");
@@ -40,6 +42,11 @@ app.use("/skills", skillsRoutes);
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+initDatabase().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}).catch((error) => {
+  console.error("Failed to initialize database:", error);
+  process.exit(1);
 });
