@@ -128,10 +128,10 @@ async function loadCloudSaveAfterLogin(userId) {
       normalizeLoadedState();
     }
 
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
-      ...state,
-      monsters: []
-    }));
+localStorage.setItem(getCurrentSaveKey(), JSON.stringify({
+  ...state,
+  monsters: []
+}));
 
     console.log("Cloud save loaded.");
   } catch (error) {
@@ -158,11 +158,12 @@ function bindAuthUI() {
 
   const savedUserRaw = localStorage.getItem("loggedInUser");
 
-  if (savedUserRaw) {
-    const savedUser = JSON.parse(savedUserRaw);
+if (savedUserRaw) {
+  const savedUser = JSON.parse(savedUserRaw);
 
-    setDisplayedPlayerName(savedUser.username);
+  setDisplayedPlayerName(savedUser.username);
 
+  loadCloudSaveAfterLogin(savedUser.id).then(() => {
     window.gamePausedForAuth = false;
 
     applyAdminVisibility();
@@ -170,7 +171,13 @@ function bindAuthUI() {
     sendOnlineHeartbeat?.();
     updateOnlinePlayersUI?.();
     setCloudSaveStatus?.("Ready", "saved");
-  } else {
+
+    updateUI?.();
+    renderEquipmentSlots?.();
+    renderDepotPanel?.();
+    renderFishingPanel?.(state.activeFishingTab || "rod");
+  });
+} else {
     applyAdminVisibility();
 
     if (isLocalDevGame?.()) {
