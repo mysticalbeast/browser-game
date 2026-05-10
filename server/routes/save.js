@@ -1,12 +1,12 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
-
 const authMiddleware = require("../middleware/auth");
 
-const router = express.Router();
+const {
+  loadPlayerSave,
+  savePlayerSave
+} = require("../dbSaves");
 
-const SAVES_FILE = path.join(__dirname, "../data/saves.json");
+const router = express.Router();
 
 const MAX_LEVEL = 2000;
 const MAX_GOLD = 1_000_000_000_000;
@@ -15,26 +15,6 @@ const MAX_SKILL_POINTS = 1000;
 const MAX_MATERIAL_AMOUNT = 10_000_000;
 const MAX_EQUIPMENT_ITEMS = 500;
 const MAX_LOG_MESSAGES = 150;
-
-const {
-  loadPlayerSave,
-  savePlayerSave
-} = require("../dbSaves");
-
-function loadSaves() {
-  if (!fs.existsSync(SAVES_FILE)) return {};
-
-  try {
-    return JSON.parse(fs.readFileSync(SAVES_FILE, "utf8"));
-  } catch (error) {
-    console.error("Failed to read saves.json:", error);
-    return {};
-  }
-}
-
-function saveSaves(saves) {
-  fs.writeFileSync(SAVES_FILE, JSON.stringify(saves, null, 2));
-}
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -62,20 +42,6 @@ function sanitizeNumberMap(map, maxValue) {
   return sanitized;
 }
 
-function getAllowedSkillPointsForLevel(level) {
-  let points = 0;
-
-  for (let currentLevel = 2; currentLevel <= level; currentLevel++) {
-    if (currentLevel <= 50) {
-      points++;
-    } else if (currentLevel % 3 === 0) {
-      points++;
-    }
-  }
-
-  return points;
-}
-
 function getSpentSkillPoints(skills) {
   if (!isPlainObject(skills)) return 0;
 
@@ -84,7 +50,37 @@ function getSpentSkillPoints(skills) {
   }, 0);
 }
 
-function validateAndSanitizeSave(incomingSave, existingSave = null) {
+function sanitizePersistentSave(save) {
+  const cleaned = { ...save };
+
+  delete cleaned.monsters;
+  delete cleaned.projectiles;
+  delete cleaned.floatingTexts;
+  delete cleaned.damageNumbers;
+  delete cleaned.notifications;
+  delete cleaned.combatToken;
+  delete cleaned.spawnRequestInProgress;
+  delete cleaned.lastSpawnRequestAt;
+  delete cleaned.isAwayForOffline;
+  delete cleaned.offlineGainProcessing;
+
+  delete cleaned.activeMonster;
+  delete cleaned.currentMonster;
+  delete cleaned.pendingReward;
+  delete cleaned.pendingLoot;
+  delete cleaned.pendingCloudSave;
+
+  delete cleaned.skeletons;
+  delete cleaned.arrows;
+  delete cleaned.fireballs;
+  delete cleaned.effects;
+  delete cleaned.vfx;
+  delete cleaned.animations;
+
+  return cleaned;
+}
+
+function validateAndSanitizeSave(incomingSave) {
   if (!isPlainObject(incomingSave)) {
     return {
       ok: false,
@@ -92,10 +88,10 @@ function validateAndSanitizeSave(incomingSave, existingSave = null) {
     };
   }
 
-  const save = {
+  const save = sanitizePersistentSave({
     ...incomingSave,
     monsters: []
-  };
+  });
 
   save.level = Math.floor(clampNumber(save.level, 1, MAX_LEVEL, 1));
   save.exp = Math.floor(clampNumber(save.exp, 0, Number.MAX_SAFE_INTEGER, 0));
@@ -111,7 +107,6 @@ function validateAndSanitizeSave(incomingSave, existingSave = null) {
   save.skills = sanitizeNumberMap(skills, 1000);
 
   const spentSkillPoints = getSpentSkillPoints(save.skills);
-
   const maxTotalSkillPoints = 100000;
 
   if (spentSkillPoints + save.skillPoints > maxTotalSkillPoints) {
@@ -168,133 +163,6 @@ function validateAndSanitizeSave(incomingSave, existingSave = null) {
     clampNumber(save.lastSeenAt, 0, Date.now(), Date.now())
   );
 
-  // =========================
-  // DELTA VALIDATION
-  // =========================
-
-  if (false && existingSave) {
-    const previousLevel = Number(existingSave.level || 1);
-    const previousGold = Number(existingSave.gold || 0);
-    const previousStars = Number(existingSave.stars || 0);
-    const previousExp = Number(existingSave.exp || 0);
-
-    const previousSaveTime = Number(existingSave.lastSeenAt || 0);
-    const currentSaveTime = Number(save.lastSeenAt || Date.now());
-
-    const elapsedMs = Math.max(
-      1000,
-      currentSaveTime - previousSaveTime
-    );
-
-    const elapsedMinutes = elapsedMs / 60000;
-
-    // =========================
-    // LEVEL DELTA
-    // =========================
-
-    const maxLevelGain =
-      Math.max(25, elapsedMinutes * 5);
-
-    if ((save.level - previousLevel) > maxLevelGain) {
-      return {
-        ok: false,
-        message: "Save rejected: impossible level progression."
-      };
-    }
-
-    // =========================
-    // GOLD DELTA
-    // =========================
-
-    const maxGoldGain =
-      Math.max(5_000_000, elapsedMinutes * 2_000_000);
-
-    if ((save.gold - previousGold) > maxGoldGain) {
-      return {
-        ok: false,
-        message: "Save rejected: impossible gold gain."
-      };
-    }
-
-    // =========================
-    // STAR DELTA
-    // =========================
-
-    const maxStarGain =
-      Math.max(5000, elapsedMinutes * 500);
-
-    if ((save.stars - previousStars) > maxStarGain) {
-      return {
-        ok: false,
-        message: "Save rejected: impossible star gain."
-      };
-    }
-
-    // =========================
-    // EXP DELTA
-    // =========================
-
-    const maxExpGain =
-      Math.max(5_000_000, elapsedMinutes * 2_000_000);
-
-    if ((save.exp - previousExp) > maxExpGain) {
-      return {
-        ok: false,
-        message: "Save rejected: impossible EXP gain."
-      };
-    }
-
-    // =========================
-    // MATERIAL DELTAS
-    // =========================
-
-    const previousMaterials =
-      existingSave.materials || {};
-
-    for (const [key, value] of Object.entries(save.materials || {})) {
-      const oldValue =
-        Number(previousMaterials[key] || 0);
-
-      const delta = value - oldValue;
-
-      const maxMaterialGain =
-        Math.max(1000, elapsedMinutes * 250);
-
-      if (delta > maxMaterialGain) {
-        return {
-          ok: false,
-          message: `Save rejected: impossible material gain (${key}).`
-        };
-      }
-    }
-
-    // =========================
-    // SKILL POINT DELTA
-    // Disabled during backend migration.
-    // Skill purchases and reward sources are still partly frontend-controlled.
-    // =========================
-
-    // =========================
-    // REBIRTH COIN DELTA
-    // =========================
-
-    const previousRebirthCoins =
-      Number(existingSave.rebirth?.coins || 0);
-
-    const currentRebirthCoins =
-      Number(save.rebirth?.coins || 0);
-
-    const maxRebirthCoinGain =
-      Math.max(50, elapsedMinutes * 10);
-
-    if ((currentRebirthCoins - previousRebirthCoins) > maxRebirthCoinGain) {
-      return {
-        ok: false,
-        message: "Save rejected: impossible rebirth coin gain."
-      };
-    }
-  }
-
   return {
     ok: true,
     save
@@ -314,33 +182,13 @@ router.get("/:userId", authMiddleware, async (req, res) => {
   try {
     const dbSave = await loadPlayerSave(userId);
 
-    if (dbSave) {
-      return res.json({
-        success: true,
-        save: {
-          save: dbSave,
-          updatedAt: Date.now(),
-          source: "postgres"
-        }
-      });
-    }
-
-    const saves = loadSaves();
-    const jsonSave = saves[userId] || null;
-
-    if (jsonSave?.save) {
-      await savePlayerSave(
-  userId,
-  sanitizePersistentSave(validation.save)
-);
-    }
-
     res.json({
       success: true,
-      save: jsonSave
+      save: dbSave
         ? {
-            ...jsonSave,
-            source: "json-fallback"
+            save: dbSave,
+            updatedAt: Number(dbSave.updatedAt || Date.now()),
+            source: "postgres"
           }
         : null
     });
@@ -353,36 +201,6 @@ router.get("/:userId", authMiddleware, async (req, res) => {
     });
   }
 });
-
-function sanitizePersistentSave(save) {
-  const cleaned = { ...save };
-
-  delete cleaned.monsters;
-  delete cleaned.projectiles;
-  delete cleaned.floatingTexts;
-  delete cleaned.damageNumbers;
-  delete cleaned.notifications;
-  delete cleaned.combatToken;
-  delete cleaned.spawnRequestInProgress;
-  delete cleaned.lastSpawnRequestAt;
-  delete cleaned.isAwayForOffline;
-  delete cleaned.offlineGainProcessing;
-
-  delete cleaned.activeMonster;
-  delete cleaned.currentMonster;
-  delete cleaned.pendingReward;
-  delete cleaned.pendingLoot;
-  delete cleaned.pendingCloudSave;
-
-  delete cleaned.skeletons;
-  delete cleaned.arrows;
-  delete cleaned.fireballs;
-  delete cleaned.effects;
-  delete cleaned.vfx;
-  delete cleaned.animations;
-
-  return cleaned;
-}
 
 router.post("/:userId", authMiddleware, async (req, res) => {
   const { userId } = req.params;
@@ -403,68 +221,58 @@ router.post("/:userId", authMiddleware, async (req, res) => {
     });
   }
 
-const saves = loadSaves();
+  try {
+    const existingSave = await loadPlayerSave(userId);
+    const persistentSave = sanitizePersistentSave(save);
+    const validation = validateAndSanitizeSave(persistentSave);
 
-let existingSave = await loadPlayerSave(userId);
+    if (!validation.ok) {
+      return res.status(400).json({
+        success: false,
+        message: validation.message
+      });
+    }
 
-if (!existingSave) {
-  existingSave = saves[userId]?.save || null;
-}
+    const finalSave = sanitizePersistentSave(validation.save);
 
-const persistentSave = sanitizePersistentSave(save);
-const validation = validateAndSanitizeSave(persistentSave, existingSave);
+    if (existingSave) {
+      // Backend-owned skills
+      finalSave.skills = existingSave.skills || {};
 
-  if (!validation.ok) {
-    return res.status(400).json({
+      finalSave.skillPoints = Math.floor(
+        Number(existingSave.skillPoints || 0)
+      );
+
+      finalSave.unlockedNodes = Array.isArray(existingSave.unlockedNodes)
+        ? existingSave.unlockedNodes
+        : ["minotaur_category"];
+
+      // Backend-owned rebirth
+      finalSave.rebirth = existingSave.rebirth || {
+        count: 0,
+        coins: 0
+      };
+
+      finalSave.rebirthUpgrades =
+        existingSave.rebirthUpgrades || {};
+    }
+
+    finalSave.lastSeenAt = Date.now();
+
+    await savePlayerSave(userId, finalSave);
+
+    res.json({
+      success: true,
+      message: "Cloud save updated."
+    });
+  } catch (error) {
+    console.error("Failed to save cloud save:", error);
+
+    res.status(500).json({
       success: false,
-      message: validation.message
+      message: "Failed to save cloud save."
     });
   }
-
-  if (existingSave) {
-    // =========================
-    // BACKEND-OWNED SKILLS
-    // =========================
-
-    validation.save.skills = existingSave.skills || {};
-
-    validation.save.skillPoints = Math.floor(
-      Number(existingSave.skillPoints || 0)
-    );
-
-    validation.save.unlockedNodes = Array.isArray(existingSave.unlockedNodes)
-      ? existingSave.unlockedNodes
-      : ["minotaur_category"];
-
-    // =========================
-    // BACKEND-OWNED REBIRTH
-    // =========================
-
-    validation.save.rebirth = existingSave.rebirth || {
-      count: 0,
-      coins: 0
-    };
-
-    validation.save.rebirthUpgrades =
-      existingSave.rebirthUpgrades || {};
-  }
-
-  saves[userId] = {
-    save: validation.save,
-    updatedAt: Date.now()
-  };
-
-  saveSaves(saves);
-
-await savePlayerSave(
-  userId,
-  sanitizePersistentSave(validation.save)
-);
-
-  res.json({
-    success: true,
-    message: "Cloud save updated."
-  });
 });
 
 module.exports = router;
