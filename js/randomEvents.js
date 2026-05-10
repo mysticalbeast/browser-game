@@ -209,6 +209,64 @@ if (isInSiegeZone()) {
   saveGame();
 }
 
+function getSiegeContributionShare() {
+  const result = state.siegeEvent?.participantResult;
+  const participants = state.siegeEvent?.lastResult?.participants || {};
+
+  if (!result || !participants) return 0;
+
+  const totalDamage = Object.values(participants).reduce((sum, player) => {
+    return sum + (player.damage || 0);
+  }, 0);
+
+  if (totalDamage <= 0) return 0;
+
+  return Math.max(0, Math.min(1, (result.damage || 0) / totalDamage));
+}
+
+function calculateSiegeContributionRewards(kills, contributionShare) {
+  const zone = getSiegeRewardZone();
+
+  const safeKills = Math.max(0, kills || 0);
+  const safeShare = Math.max(0, Math.min(1, contributionShare || 0));
+
+  const skinSiegeBonus =
+    1 + (getActiveMinotaurSkinBonus?.("siegeRewards") || 0);
+
+  const averageGold = Math.floor((zone.gold[0] + zone.gold[1]) / 2);
+  const averageExp = Math.floor((zone.exp[0] + zone.exp[1]) / 2);
+
+  const totalGoldPool = Math.floor(
+    safeKills *
+    averageGold *
+    SIEGE_GOLD_EXP_BASE_MULTIPLIER *
+    skinSiegeBonus
+  );
+
+  const totalExpPool = Math.floor(
+    safeKills *
+    averageExp *
+    SIEGE_GOLD_EXP_BASE_MULTIPLIER *
+    skinSiegeBonus
+  );
+
+  return {
+    gold: Math.floor(totalGoldPool * safeShare),
+    exp: Math.floor(totalExpPool * safeShare),
+    stars: Math.floor((safeKills * (1 + Math.floor((state.level || 1) / 10))) * safeShare),
+
+    whetstones: Math.floor((safeKills * 0.06) * safeShare),
+    silverTokens: Math.floor((safeKills * 0.025) * safeShare),
+
+    greenEssence: Math.floor((safeKills * 0.12) * safeShare),
+    blueEssence: Math.floor((safeKills * 0.07) * safeShare),
+    yellowEssence: Math.floor((safeKills * 0.035) * safeShare),
+    redEssence: Math.floor((safeKills * 0.015) * safeShare),
+
+    salvageMaterials: Math.floor((safeKills * 0.12) * safeShare)
+  };
+}
+
 function finishSiegeEvent(reason = "ended") {
   if (!state.siegeEvent?.active) return;
 
@@ -223,11 +281,13 @@ function finishSiegeEvent(reason = "ended") {
   const kills = state.siegeEvent.kills || 0;
   const survivedSeconds = getSiegeElapsedSeconds();
 
-  const rewards = state.siegeEvent.rewards || {};
+const contributionShare = getSiegeContributionShare();
 
-  const goldReward = rewards.gold || 0;
-  const expReward = rewards.exp || 0;
-  const starReward = rewards.stars || 0;
+const rewards = calculateSiegeContributionRewards(kills, contributionShare);
+
+const goldReward = rewards.gold || 0;
+const expReward = rewards.exp || 0;
+const starReward = rewards.stars || 0;
 
   state.gold = (state.gold || 0) + goldReward;
   state.exp = (state.exp || 0) + expReward;
@@ -276,15 +336,17 @@ function finishSiegeEvent(reason = "ended") {
   const minutes = Math.floor(survivedSeconds / 60);
   const seconds = survivedSeconds % 60;
 
-  showSiegeResultPopup({
-    reason,
-    kills,
-    timeSurvived: `${minutes}:${String(seconds).padStart(2, "0")}`,
-    goldReward,
-    expReward,
-    starReward,
-    rewards
-  });
+showSiegeResultPopup({
+  reason,
+  kills,
+  timeSurvived: `${minutes}:${String(seconds).padStart(2, "0")}`,
+  goldReward,
+  expReward,
+  starReward,
+  rewards,
+  participantResult: state.siegeEvent.participantResult || null,
+  contributionShare
+});
 
   closeSiegeEvent(Date.now());
   updateUI();
@@ -318,10 +380,39 @@ async function syncGlobalEvents() {
         previousSiege.joined === true ||
         getCurrentZoneId?.() === SIEGE_ZONE_ID;
 
-      if (wasActive && serverIsInactive && playerWasInSiege) {
-        const reason = serverSiege.lastResult?.reason || "timerEnded";
+      if (wasActive && serverIsInactive && playerWasInSiege && serverSiege.lastResult) {
+        const resultEndedAt = serverSiege.lastResult.endedAt || 0;
 
-        finishSiegeEvent(reason);
+        if (resultEndedAt && resultEndedAt !== lastProcessedSiegeResultAt) {
+          lastProcessedSiegeResultAt = resultEndedAt;
+
+          const user = getLoggedInUser?.();
+          const participant = serverSiege.lastResult.participants?.[user?.id];
+
+          if (participant && participant.damage > 0) {
+            state.siegeEvent.participantResult = participant;
+
+            const reason = serverSiege.lastResult.reason || "timerEnded";
+            finishSiegeEvent(reason);
+          } else {
+            showFilterNotification(
+              "system",
+              "🏰 Siege ended. You did not participate, so no rewards were granted."
+            );
+
+            state.siegeEvent.joined = false;
+            state.siegeEvent.active = false;
+            state.siegeEvent.monsters = [];
+
+            if (isInSiegeZone?.()) {
+              returnFromEventZone?.();
+            }
+
+            clearSiegeVisuals?.();
+            updateSiegeNotification?.();
+            saveGame?.();
+          }
+        }
       }
 
       state.siegeEvent = {
@@ -553,9 +644,18 @@ async function hitSiegeMonster(id) {
   showFloatingText("1", monster.x, monster.y, "spell");
 
   try {
-    const response = await fetch(`${API_URL}/events/siege/hit/${encodeURIComponent(id)}`, {
-      method: "POST"
-    });
+    const user = getLoggedInUser?.();
+
+const response = await fetch(`${API_URL}/events/siege/hit/${encodeURIComponent(id)}`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    userId: user?.id,
+    username: user?.username
+  })
+});
 
     const data = await response.json();
 
@@ -573,9 +673,8 @@ async function hitSiegeMonster(id) {
       };
 
       if (killed) {
-        addSkinProgress?.("siegeKills", 1);
-        rollSiegeKillReward(monster);
-      }
+  addSkinProgress?.("siegeKills", 1);
+}
 
       renderServerSiegeState();
       updateSiegeNotification();
@@ -811,6 +910,9 @@ function showSiegeResultPopup(data) {
 
       <div class="siegeResultStats">
         <div><span>Monsters defeated</span><b>${fmt(data.kills)}</b></div>
+		<div><span>Your damage</span><b>${fmt(data.participantResult?.damage || 0)}</b></div>
+        <div><span>Your kills</span><b>${fmt(data.participantResult?.kills || 0)}</b></div>
+		<div><span>Your contribution</span><b>${((data.contributionShare || 0) * 100).toFixed(1)}%</b></div>
         <div><span>Time survived</span><b>${data.timeSurvived}</b></div>
         <div><span>Gold reward</span><b>+${fmt(data.goldReward)}</b></div>
         <div><span>Star reward</span><b>+${fmt(data.starReward)}</b></div>

@@ -119,12 +119,14 @@ function resetSiege(now = Date.now(), reason = "timerEnded", previousSiege = nul
     nextSpawnAt: 0,
     monsters: [],
     joinedPlayers: [],
+	participants: {},
 
     lastResult: previousSiege ? {
-      reason,
-      endedAt: now,
-      kills: previousSiege.kills || 0
-    } : null
+  reason,
+  endedAt: now,
+  kills: previousSiege.kills || 0,
+  participants: previousSiege.participants || {}
+} : null
   };
 }
 
@@ -145,8 +147,8 @@ function startSiege(now = Date.now()) {
     kills: 0,
     nextSpawnAt: now + 1000,
     monsters: [],
-	monsters: [],
-    joinedPlayers: []
+    joinedPlayers: [],
+	participants: {}
   };
 }
 
@@ -275,6 +277,29 @@ router.post("/siege/hit/:monsterId", (req, res) => {
 
   const siege = globalEvents.siege;
 
+const userId = String(req.body?.userId || "");
+const username = String(req.body?.username || "Unknown");
+
+if (!userId) {
+  return res.status(400).json({
+    success: false,
+    message: "Missing userId."
+  });
+}
+
+if (!siege.participants) {
+  siege.participants = {};
+}
+
+if (!siege.participants[userId]) {
+  siege.participants[userId] = {
+    userId,
+    username,
+    damage: 0,
+    kills: 0
+  };
+}
+
   if (!siege.active) {
     return res.status(400).json({
       success: false,
@@ -292,13 +317,17 @@ router.post("/siege/hit/:monsterId", (req, res) => {
     });
   }
 
-  monster.hp = Math.max(0, monster.hp - 1);
+  const damage = 1;
+monster.hp = Math.max(0, monster.hp - damage);
+
+siege.participants[userId].damage += damage;
 
   let killed = false;
 
   if (monster.hp <= 0) {
     killed = true;
     siege.kills += 1;
+	siege.participants[userId].kills += 1;
     siege.monsters = siege.monsters.filter(monster => String(monster.id) !== monsterId);
   }
 
