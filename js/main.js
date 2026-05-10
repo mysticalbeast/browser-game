@@ -738,7 +738,7 @@ function initGame() {
     if (window.gamePausedForAuth) return;
 
     syncGlobalEvents?.();
-  }, 10000);
+  }, 500);
 
   sendOnlineHeartbeat?.();
 

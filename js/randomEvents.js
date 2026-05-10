@@ -286,10 +286,20 @@ async function syncGlobalEvents() {
     if (!data.success || !data.events) return;
 
     if (data.events.siege) {
+      const wasActive = state.siegeEvent?.active === true;
+
       state.siegeEvent = {
         ...state.siegeEvent,
         ...data.events.siege
       };
+
+      if (!state.siegeEvent.active && wasActive) {
+        clearSiegeVisuals();
+      }
+
+      if (state.siegeEvent.active && isInSiegeZone()) {
+        renderServerSiegeState();
+      }
     }
 
     updateSiegeNotification?.();
@@ -302,23 +312,38 @@ async function syncGlobalEvents() {
   }
 }
 
+function renderServerSiegeState() {
+  if (!isSiegeEventActive() || !isInSiegeZone()) {
+    clearSiegeVisuals();
+    return;
+  }
+
+  renderSiegeWall();
+
+  const serverMonsterIds = new Set(
+    (state.siegeEvent.monsters || []).map(monster => String(monster.id))
+  );
+
+  document.querySelectorAll("[data-siege-monster-id]").forEach(el => {
+    if (!serverMonsterIds.has(String(el.dataset.siegeMonsterId))) {
+      el.remove();
+    }
+  });
+
+  (state.siegeEvent.monsters || []).forEach(monster => {
+    renderSiegeMonster(monster);
+  });
+}
+
 function updateSiegeGameplay(now = Date.now()) {
   if (!isSiegeEventActive() || !isInSiegeZone()) {
     clearSiegeVisuals();
     return;
   }
 
-  if (!state.siegeEvent.nextSpawnAt) {
-    state.siegeEvent.nextSpawnAt = now + 500;
-  }
-
-  if (now >= state.siegeEvent.nextSpawnAt) {
-    spawnSiegeMonster();
-    state.siegeEvent.nextSpawnAt = now + getSiegeSpawnInterval();
-  }
-
-  moveSiegeMonsters(now);
-  renderSiegeWall();
+  // Siege monsters, movement, wall HP, and kills are now controlled by the backend.
+  // Frontend only renders synced server state.
+  renderServerSiegeState();
 }
 
 function getSiegeElapsedSeconds() {
@@ -482,30 +507,46 @@ monster.y += monster.speed * deltaSeconds;
   });
 }
 
-function hitSiegeMonster(id) {
+async function hitSiegeMonster(id) {
   if (!isSiegeEventActive()) return;
   if (!isInSiegeZone()) return;
 
-  const monster = state.siegeEvent.monsters.find(m => m.id === id);
+  const monster = state.siegeEvent.monsters.find(m => String(m.id) === String(id));
   if (!monster) return;
-
-  monster.hp = Math.max(0, monster.hp - 1);
 
   showFloatingText("1", monster.x, monster.y, "spell");
 
-  if (monster.hp <= 0) {
-    state.siegeEvent.kills = (state.siegeEvent.kills || 0) + 1;
-	
-	addSkinProgress?.("siegeKills", 1);
+  try {
+    const response = await fetch(`${API_URL}/events/siege/hit/${encodeURIComponent(id)}`, {
+      method: "POST"
+    });
 
-    rollSiegeKillReward(monster);
+    const data = await response.json();
 
-    removeSiegeMonster(id);
-    updateSiegeNotification();
-    return;
+    if (!response.ok || !data.success) {
+      console.warn("Siege hit failed:", data.message || data.error);
+      return;
+    }
+
+    if (data.siege) {
+      const killed = data.killed === true;
+
+      state.siegeEvent = {
+        ...state.siegeEvent,
+        ...data.siege
+      };
+
+      if (killed) {
+        addSkinProgress?.("siegeKills", 1);
+        rollSiegeKillReward(monster);
+      }
+
+      renderServerSiegeState();
+      updateSiegeNotification();
+    }
+  } catch (error) {
+    console.warn("Failed to hit siege monster:", error);
   }
-
-  renderSiegeMonster(monster);
 }
 
 function damageSiegeWall(amount) {
