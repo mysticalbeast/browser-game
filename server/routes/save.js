@@ -301,7 +301,7 @@ function validateAndSanitizeSave(incomingSave, existingSave = null) {
   };
 }
 
-router.get("/:userId", authMiddleware, (req, res) => {
+router.get("/:userId", authMiddleware, async (req, res) => {
   const { userId } = req.params;
 
   if (String(req.user.id) !== String(userId)) {
@@ -311,12 +311,44 @@ router.get("/:userId", authMiddleware, (req, res) => {
     });
   }
 
-  const saves = loadSaves();
+  try {
+    const dbSave = await loadPlayerSave(userId);
 
-  res.json({
-    success: true,
-    save: saves[userId] || null
-  });
+    if (dbSave) {
+      return res.json({
+        success: true,
+        save: {
+          save: dbSave,
+          updatedAt: Date.now(),
+          source: "postgres"
+        }
+      });
+    }
+
+    const saves = loadSaves();
+    const jsonSave = saves[userId] || null;
+
+    if (jsonSave?.save) {
+      await savePlayerSave(userId, jsonSave.save);
+    }
+
+    res.json({
+      success: true,
+      save: jsonSave
+        ? {
+            ...jsonSave,
+            source: "json-fallback"
+          }
+        : null
+    });
+  } catch (error) {
+    console.error("Failed to load save:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to load save."
+    });
+  }
 });
 
 router.post("/:userId", authMiddleware, async (req, res) => {
