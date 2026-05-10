@@ -478,7 +478,7 @@ function moveSiegeMonsters(now = Date.now()) {
   const arenaEl = document.getElementById("arena");
   if (!arenaEl) return;
 
-  const wallY = arenaEl.clientHeight - 240;
+  const wallY = arenaEl.clientHeight - 760;
 
   state.siegeEvent.monsters.forEach(monster => {
     if (monster.attackingWall) {
