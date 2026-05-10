@@ -23,8 +23,6 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-const db = require("../database");
-
 router.delete("/save/:username", requireAdmin, async (req, res) => {
   try {
     const username = String(req.params.username || "").trim();
