@@ -3,9 +3,11 @@ const express = require("express");
 const router = express.Router();
 
 const SIEGE_DURATION_MS = 15 * 60 * 1000;
-const SIEGE_CHECK_INTERVAL_MS = 60 * 1000; // testing
-const SIEGE_START_CHANCE = 1.0; // testing
+const SIEGE_CHECK_INTERVAL_MS = 20 * 60 * 1000;
+const SIEGE_START_CHANCE = 0.25;
 const SIEGE_SPAWN_INTERVAL_MS = 2500;
+
+let lastProcessedSiegeResultAt = 0;
 
 const SIEGE_ZONES = [
   { id: 9998, name: "Siege Battlefield" }
@@ -214,7 +216,7 @@ function getSiegeSpawnInterval() {
   const playerCount = Math.max(1, siege.joinedPlayers?.length || 1);
 
   // 1 player = 100%, 5 players = 200%
-  const playerMultiplier = 1 + ((playerCount - 1) * 0.25);
+  const playerMultiplier = 1 + ((playerCount - 1) * 0.175);
 
   const spawnsPerSecond = baseSpawnsPerSecond * playerMultiplier;
 
