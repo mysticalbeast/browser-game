@@ -7,6 +7,7 @@ const saveRoutes = require("./routes/save");
 const leaderboardRoutes = require("./routes/leaderboard");
 const onlineRoutes = require("./routes/online");
 const chatRoutes = require("./routes/chat");
+const adminRoutes = require("./routes/admin");
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/save", saveRoutes);
 app.use("/leaderboard", leaderboardRoutes);
 app.use("/online", onlineRoutes);
 app.use("/chat", chatRoutes);
+app.use("/admin", adminRoutes);
 
 const PORT = process.env.PORT || 3000;
 

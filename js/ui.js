@@ -3576,7 +3576,47 @@ function getSkillEffectText(skillKey, current = 0) {
     gearingUp: `Improves equipment drops. Current bonus: ${current * 5}%.`,
     likeABoss: `Improves boss rewards. Current bonus: ${current * 5}%.`,
     lootHungry: `Improves general loot chance. Current bonus: ${current * 5}%.`,
-    uberDifficulty: `Unlocks or improves Uber difficulty rewards. Current level: ${current}.`,
+uberDifficulty: (() => {
+  const next = current + 1;
+
+  const rewards = [];
+
+  rewards.push("+0.5% Uber boss spawn chance");
+
+  if (next === 1) {
+    rewards.push("Unlock Uber bosses");
+  }
+
+  if (next === 2) {
+    rewards.push("+10% Uber loot");
+  }
+
+  if (next === 3) {
+    rewards.push("+10% Uber EXP");
+  }
+
+  if (next === 5) {
+    rewards.push("+1 extra Uber loot roll");
+  }
+
+  if (next === 6) {
+    rewards.push("+20% Uber loot");
+  }
+
+  if (next === 7) {
+    rewards.push("+20% Uber EXP");
+  }
+
+  if (next === 9) {
+    rewards.push("+2 extra Uber loot rolls");
+  }
+
+  if (next === 10) {
+    rewards.push("Unlock Mythic Uber variants");
+  }
+
+  return rewards.join(". ");
+})(),
 
     // =====================
     // NECROMANCER (OLD SYSTEM)
@@ -3658,7 +3698,7 @@ function getSkillBaseText(skillKey) {
     gearingUp: "Improves equipment drops.",
     likeABoss: "Improves boss rewards.",
     lootHungry: "Improves general loot chance.",
-    uberDifficulty: "Unlocks or improves Uber difficulty rewards.",
+    uberDifficulty: "Unlocks Uber bosses and improves Uber spawn chance, loot, EXP, extra rolls, and Mythic variants.",
 
     // =====================
     // NECROMANCER (OLD SYSTEM)
@@ -3722,7 +3762,49 @@ function getSkillCurrentBonusText(skillKey, current = 0) {
     gearingUp: `${current * 5}% equipment drop bonus`,
     likeABoss: `${current * 5}% boss reward bonus`,
     lootHungry: `${current * 5}% loot chance`,
-    uberDifficulty: `Level ${current}`,
+uberDifficulty: (() => {
+  if (current <= 0) {
+    return "Uber bosses locked";
+  }
+
+  const bonuses = [];
+
+  bonuses.push(`+${(current * 0.5).toFixed(1)}% Uber spawn chance`);
+
+  if (current >= 1) {
+    bonuses.push("Uber bosses unlocked");
+  }
+
+  if (current >= 2) {
+    bonuses.push("+10% Uber loot");
+  }
+
+  if (current >= 3) {
+    bonuses.push("+10% Uber EXP");
+  }
+
+  if (current >= 5) {
+    bonuses.push("+1 extra Uber loot roll");
+  }
+
+  if (current >= 6) {
+    bonuses.push("+20% Uber loot");
+  }
+
+  if (current >= 7) {
+    bonuses.push("+20% Uber EXP");
+  }
+
+  if (current >= 9) {
+    bonuses.push("+2 extra Uber loot rolls");
+  }
+
+  if (current >= 10) {
+    bonuses.push("Mythic Uber variants unlocked");
+  }
+
+  return bonuses.join("<br>");
+})(),
 	
 	darkNovaDamage: `+${current * 20}% Necromancer damage`,
 	darkNovaTargets: `+${current} Necromancer targets`,

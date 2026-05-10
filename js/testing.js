@@ -53,18 +53,29 @@ function bindTestingButtons() {
   };
 
   document.getElementById("addLevelBtn").onclick = () => {
-    state.level++;
+  const newLevel = state.level + 1;
+
+  let gainedPoint = false;
+
+  if (newLevel <= 50) {
     state.skillPoints++;
-    state.exp = 0;
+    gainedPoint = true;
+  } else if (newLevel % 3 === 0) {
+    state.skillPoints++;
+    gainedPoint = true;
+  }
 
-    showFilterNotification(
-      "system",
-      `🧪 Testing: level increased to ${state.level}. (+1 skill point)`
-    );
+  state.level = newLevel;
+  state.exp = 0;
 
-    updateUI();
-    saveGame();
-  };
+  showFilterNotification(
+    "system",
+    `🧪 Testing: level increased to ${state.level}.${gainedPoint ? " (+1 skill point)" : ""}`
+  );
+
+  updateUI();
+  saveGame();
+};
 
   document.getElementById("removeLevelBtn").onclick = () => {
     state.level = Math.max(1, state.level - 1);

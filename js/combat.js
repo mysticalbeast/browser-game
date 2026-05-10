@@ -1143,28 +1143,38 @@ function killMonster(monster) {
     ? 1 + (getActiveMinotaurSkinBonus?.("bossRewards") || 0)
     : 1;
 
-  const bossRewardMultiplier =
-    (monster.isUber ? 100 : monster.isBoss ? 25 : 1) *
-    skinBossBonus;
+const baseBossRewardMultiplier =
+  (monster.isUber ? 100 : monster.isBoss ? 25 : 1) *
+  skinBossBonus;
 
-  const goldGain = Math.floor(
+const uberLootMultiplier = monster.isUber
+  ? getUberLootBonusMultiplier()
+  : 1;
+
+const uberExpMultiplier = monster.isUber
+  ? getUberExpBonusMultiplier()
+  : 1;
+
+const goldGain = Math.floor(
   rand(zone.gold[0], zone.gold[1]) *
   skillGoldBoost *
   potionGoldBoost *
   researchGoldBoost *
   phoenixBoost *
   fishingGoldBoost *
-  bossRewardMultiplier
+  baseBossRewardMultiplier *
+  uberLootMultiplier
 );
 
-  const expGain = Math.floor(
+const expGain = Math.floor(
   rand(zone.exp[0], zone.exp[1]) *
   skillExpBoost *
   potionExpBoost *
   researchExpBoost *
   phoenixBoost *
   fishingExpBoost *
-  bossRewardMultiplier
+  baseBossRewardMultiplier *
+  uberExpMultiplier
 );
 
   state.gold += goldGain;
@@ -1269,7 +1279,10 @@ function rollBossEssenceDrops(x, y, isUber = false) {
 
   const doubleDropChance = getTotalEquipmentStat("doubleDrop") / 100;
 
-  const guaranteedRolls = isUber ? rand(6, 10) : rand(2, 4);
+  const extraUberRolls = isUber ? getUberExtraLootRolls() : 0;
+  const guaranteedRolls = (isUber ? rand(6, 10) : rand(2, 4)) + extraUberRolls;
+
+  const uberLootMultiplier = isUber ? getUberLootBonusMultiplier() : 1;
 
   const bossEssencePool = [
     { key: "greenEssence", name: "Green", min: 1, max: 3, weight: 60, color: "#35d66b" },
@@ -1294,6 +1307,20 @@ function rollBossEssenceDrops(x, y, isUber = false) {
     }
 
     let amount = rand(selected.min, selected.max);
+
+    if (isUber) {
+      const boostedAmount = amount * uberLootMultiplier;
+      const guaranteedAmount = Math.floor(boostedAmount);
+      const bonusChance = boostedAmount - guaranteedAmount;
+
+      amount = guaranteedAmount;
+
+      if (Math.random() < bonusChance) {
+        amount += 1;
+      }
+
+      amount = Math.max(1, amount);
+    }
 
     if (Math.random() < doubleDropChance) {
       amount *= 2;
@@ -1341,8 +1368,17 @@ function checkLevelUp() {
 
   while (state.exp >= expNeeded() && state.level < cap) {
     state.exp -= expNeeded();
-    state.level++;
-    state.skillPoints++;
+
+    const newLevel = state.level + 1;
+
+    // Skill point rules
+    if (newLevel <= 50) {
+      state.skillPoints++;
+    } else if (newLevel % 3 === 0) {
+      state.skillPoints++;
+    }
+
+    state.level = newLevel;
   }
 
   if (state.level >= cap) {

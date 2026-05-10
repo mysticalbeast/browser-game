@@ -772,13 +772,18 @@ function rollEquipmentDrop(monster) {
 
   const doubleChance = getTotalEquipmentStat("doubleDrop") / 100;
 
-  // always at least 1 drop
-  let totalDrops = 1;
+// always at least 1 drop
+let totalDrops = 1;
 
-  // chance to duplicate
-  if (Math.random() < doubleChance) {
-    totalDrops++;
-  }
+// chance to duplicate
+if (Math.random() < doubleChance) {
+  totalDrops++;
+}
+
+// Uber Difficulty levels 5 and 9 add extra Uber loot rolls
+if (monster.isUber) {
+  totalDrops += getUberExtraLootRolls();
+}
 
   for (let i = 0; i < totalDrops; i++) {
     const item = generateEquipmentItem();

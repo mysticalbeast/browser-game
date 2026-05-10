@@ -6,6 +6,26 @@ function getAuthToken() {
 
 window.gamePausedForAuth = true;
 
+function isAdminUser(user) {
+  return user?.username === "Carl";
+}
+
+function applyAdminVisibility() {
+  const user = getLoggedInUser?.();
+  const isAdmin = isAdminUser(user);
+
+  const testingBtn = document.getElementById("testingBtn");
+  const testingPanel = document.getElementById("testingPanel");
+
+  if (testingBtn) {
+    testingBtn.style.display = isAdmin ? "" : "none";
+  }
+
+  if (testingPanel && !isAdmin) {
+    testingPanel.style.display = "none";
+  }
+}
+
 async function authRequest(endpoint) {
   const username = document.getElementById("authUsername").value.trim();
   const password = document.getElementById("authPassword").value;
@@ -37,16 +57,21 @@ async function authRequest(endpoint) {
 
     if (endpoint === "/auth/login") {
       localStorage.setItem("loggedInUser", JSON.stringify(data.user));
-	  localStorage.setItem("authToken", data.token);
-	  setDisplayedPlayerName(data.user.username);
+      localStorage.setItem("authToken", data.token);
+
+      setDisplayedPlayerName(data.user.username);
 
       await loadCloudSaveAfterLogin(data.user.id);
 
       document.getElementById("authScreen").style.display = "none";
-	  window.gamePausedForAuth = false;
-	  sendOnlineHeartbeat?.();
-	  updateOnlinePlayersUI?.();
-	  setCloudSaveStatus?.("Ready", "saved");
+
+      window.gamePausedForAuth = false;
+
+      applyAdminVisibility();
+
+      sendOnlineHeartbeat?.();
+      updateOnlinePlayersUI?.();
+      setCloudSaveStatus?.("Ready", "saved");
 
       updateUI?.();
       renderEquipmentSlots?.();
@@ -78,10 +103,11 @@ async function sendOnlineHeartbeat() {
 async function loadCloudSaveAfterLogin(userId) {
   try {
     const response = await fetch(`${API_URL}/save/${userId}`, {
-  headers: {
-    "Authorization": `Bearer ${getAuthToken()}`
-  }
-});
+      headers: {
+        "Authorization": `Bearer ${getAuthToken()}`
+      }
+    });
+
     const data = await response.json();
 
     if (!data.success || !data.save?.save) {
@@ -109,6 +135,7 @@ async function loadCloudSaveAfterLogin(userId) {
 
 function setDisplayedPlayerName(username) {
   const el = document.getElementById("playerName");
+
   if (el && username) {
     el.textContent = username;
   }
@@ -125,18 +152,22 @@ function bindAuthUI() {
 
   const savedUserRaw = localStorage.getItem("loggedInUser");
 
-if (savedUserRaw) {
-  const savedUser = JSON.parse(savedUserRaw);
+  if (savedUserRaw) {
+    const savedUser = JSON.parse(savedUserRaw);
 
-  setDisplayedPlayerName(savedUser.username);
+    setDisplayedPlayerName(savedUser.username);
 
-  window.gamePausedForAuth = false;
-  sendOnlineHeartbeat?.();
-  updateOnlinePlayersUI?.();
-  setCloudSaveStatus?.("Ready", "saved");
-} else {
-  document.getElementById("authScreen").style.display = "flex";
-}
+    window.gamePausedForAuth = false;
+
+    applyAdminVisibility();
+
+    sendOnlineHeartbeat?.();
+    updateOnlinePlayersUI?.();
+    setCloudSaveStatus?.("Ready", "saved");
+  } else {
+    applyAdminVisibility();
+    document.getElementById("authScreen").style.display = "flex";
+  }
 }
 
 window.addEventListener("load", bindAuthUI);

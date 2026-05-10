@@ -32,6 +32,51 @@ function monsterMaxHp(template = null) {
   );
 }
 
+function getUberDifficultyLevel() {
+  return state.skills?.uberDifficulty || 0;
+}
+
+function isUberUnlocked() {
+  return getUberDifficultyLevel() >= 1;
+}
+
+function getUberLootBonusMultiplier() {
+  const level = getUberDifficultyLevel();
+
+  let bonus = 0;
+
+  if (level >= 2) bonus += 0.10;
+  if (level >= 6) bonus += 0.10;
+
+  return 1 + bonus;
+}
+
+function getUberExpBonusMultiplier() {
+  const level = getUberDifficultyLevel();
+
+  let bonus = 0;
+
+  if (level >= 3) bonus += 0.10;
+  if (level >= 7) bonus += 0.10;
+
+  return 1 + bonus;
+}
+
+function getUberExtraLootRolls() {
+  const level = getUberDifficultyLevel();
+
+  let rolls = 0;
+
+  if (level >= 5) rolls += 1;
+  if (level >= 9) rolls += 1;
+
+  return rolls;
+}
+
+function isMythicUberUnlocked() {
+  return getUberDifficultyLevel() >= 10;
+}
+
 function createMonster() {
   if (state.monsters.length >= getMaxMonsters()) return;
 
@@ -50,24 +95,31 @@ function createMonster() {
   const bossChance = 0.01 + (state.skills.likeABoss || 0) * 0.001;
   const isBoss = Math.random() < bossChance;
 
-  const uberChance = (state.skills.uberDifficulty || 0) * 0.005;
-  const isUber = isBoss && Math.random() < uberChance;
+const uberLevel = state.skills.uberDifficulty || 0;
+const uberChance = uberLevel > 0 ? uberLevel * 0.005 : 0;
+const isUber = isBoss && Math.random() < uberChance;
 
-  const baseHp = monsterMaxHp(template);
-  const hpMultiplier = isUber ? 15 : isBoss ? 5 : 1;
+const isMythicUber =
+  isUber &&
+  isMythicUberUnlocked() &&
+  Math.random() < 0.10;
 
-  const monster = {
-    id: crypto.randomUUID(),
-    name: template.name,
-    sprite: template.sprite,
-    x: rand(80, rect.width - 80),
-    y: rand(80, rect.height - 220),
+const baseHp = monsterMaxHp(template);
+const hpMultiplier = isMythicUber ? 30 : isUber ? 15 : isBoss ? 5 : 1;
 
-    isBoss,
-    isUber,
-    maxHp: baseHp * hpMultiplier,
-    hp: baseHp * hpMultiplier
-  };
+const monster = {
+  id: crypto.randomUUID(),
+  name: isMythicUber ? `Mythic ${template.name}` : template.name,
+  sprite: template.sprite,
+  x: rand(80, rect.width - 80),
+  y: rand(80, rect.height - 220),
+
+  isBoss,
+  isUber,
+  isMythicUber,
+  maxHp: baseHp * hpMultiplier,
+  hp: baseHp * hpMultiplier
+};
 
   state.monsters.push(monster);
   renderMonster(monster);
@@ -92,11 +144,13 @@ function renderMonster(monster) {
 el.classList.toggle("bossMonster", monster.isBoss);
 el.classList.toggle("uberMonster", monster.isUber);
 
-const name = monster.isUber
-  ? `[UBER BOSS] ${monster.name}`
-  : monster.isBoss
-    ? `[BOSS] ${monster.name}`
-    : monster.name;
+const name = monster.isMythicUber
+  ? `[MYTHIC UBER] ${monster.name.replace("Mythic ", "")}`
+  : monster.isUber
+    ? `[UBER BOSS] ${monster.name}`
+    : monster.isBoss
+      ? `[BOSS] ${monster.name}`
+      : monster.name;
 
   const hpPercent = Math.max(0, (monster.hp / monster.maxHp) * 100);
 
