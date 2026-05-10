@@ -167,7 +167,7 @@ function spawnSiegeMonster(now = Date.now()) {
 
 function updateSiegeMonsters(now = Date.now()) {
   const siege = globalEvents.siege;
-  const wallY = 760;
+  const wallY = 860;
 
   siege.monsters.forEach(monster => {
     if (monster.attackingWall) {
