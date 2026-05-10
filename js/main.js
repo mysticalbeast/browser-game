@@ -600,16 +600,29 @@ function bindEvents() {
     };
   });
 
-  document.getElementById("logoutBtn").onclick = () => {
-  saveGame();
-
-if (pendingCloudSave) {
-  uploadCloudSave(pendingCloudSave);
-  pendingCloudSave = null;
+function clearAllLocalGameSaves() {
+  Object.keys(localStorage).forEach(key => {
+    if (
+      key.startsWith("localTamperGameSave") ||
+      key.startsWith("browserGameSave") ||
+      key.includes("GameSave")
+    ) {
+      localStorage.removeItem(key);
+    }
+  });
 }
 
+document.getElementById("logoutBtn").onclick = () => {
+  saveGame();
+
+  if (pendingCloudSave) {
+    uploadCloudSave(pendingCloudSave);
+    pendingCloudSave = null;
+  }
+
+  clearAllLocalGameSaves();
+
   localStorage.removeItem("loggedInUser");
-  
   localStorage.removeItem("authToken");
 
   window.gamePausedForAuth = !isLocalDevGame?.();
@@ -620,6 +633,8 @@ if (pendingCloudSave) {
   if (messageEl) {
     messageEl.textContent = "Logged out.";
   }
+
+  location.reload();
 };
 
   bindTestingButtons();
