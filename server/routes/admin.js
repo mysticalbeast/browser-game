@@ -1,11 +1,11 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const db = require("../database");
 
 const router = express.Router();
 
 const USERS_FILE = path.join(__dirname, "../data/users.json");
-const SAVES_FILE = path.join(__dirname, "../data/saves.json");
 
 function readJson(file, fallback) {
   if (!fs.existsSync(file)) return fallback;
@@ -15,10 +15,6 @@ function readJson(file, fallback) {
   } catch {
     return fallback;
   }
-}
-
-function writeJson(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
 function requireAdmin(req, res, next) {
@@ -41,30 +37,43 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-router.delete("/save/:username", requireAdmin, (req, res) => {
+router.delete("/save/:username", requireAdmin, async (req, res) => {
   const username = String(req.params.username || "").trim();
 
-  const users = readJson(USERS_FILE, []);
-  const saves = readJson(SAVES_FILE, {});
+  try {
+    const users = readJson(USERS_FILE, []);
 
-  const user = users.find(
-    user => user.username.toLowerCase() === username.toLowerCase()
-  );
+    const user = users.find(
+      user => user.username.toLowerCase() === username.toLowerCase()
+    );
 
-  if (!user) {
-    return res.status(404).json({
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found."
+      });
+    }
+
+    await db.query(
+      `
+      DELETE FROM player_saves
+      WHERE user_id = $1
+      `,
+      [String(user.id)]
+    );
+
+    res.json({
+      success: true,
+      message: `Deleted PostgreSQL cloud save for ${user.username}.`
+    });
+  } catch (error) {
+    console.error("Admin delete save failed:", error);
+
+    res.status(500).json({
       success: false,
-      message: "User not found."
+      message: "Failed to delete cloud save."
     });
   }
-
-  delete saves[user.id];
-  writeJson(SAVES_FILE, saves);
-
-  res.json({
-    success: true,
-    message: `Deleted cloud save for ${user.username}.`
-  });
 });
 
 module.exports = router;

@@ -61,10 +61,6 @@ async function markCombatSessionUsed(token, session) {
   await saveCombatSession(token, session);
 }
 
-function saveCombatSessions(sessions) {
-  fs.writeFileSync(COMBAT_SESSIONS_FILE, JSON.stringify(sessions, null, 2));
-}
-
 function getUberDifficultyLevelFromSave(save) {
   return Number(save?.skills?.uberDifficulty || 0);
 }
@@ -88,10 +84,6 @@ function rollBackendMonsterFlags(save) {
     isUber,
     isMythicUber
   };
-}
-
-function saveSaves(saves) {
-  fs.writeFileSync(SAVES_FILE, JSON.stringify(saves, null, 2));
 }
 
 function isPotionActive(save, key) {
