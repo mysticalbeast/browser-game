@@ -143,6 +143,13 @@ function loadGame() {
 
 function normalizeLoadedState() {
   state.monsters = [];
+  state.skeletons = [];
+  state.spawnRequestInProgress = false;
+  state.lastSpawnRequestAt = 0;
+  state.pendingReward = null;
+  state.pendingLoot = null;
+  state.activeMonster = null;
+  state.currentMonster = null;
 
   state.stats = {
     sessionStartedAt: Date.now(),

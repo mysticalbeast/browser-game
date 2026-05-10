@@ -128,10 +128,13 @@ async function loadCloudSaveAfterLogin(userId) {
       normalizeLoadedState();
     }
 
-localStorage.setItem(getCurrentSaveKey(), JSON.stringify({
-  ...state,
-  monsters: []
-}));
+    localStorage.setItem(getCurrentSaveKey(), JSON.stringify({
+      ...state,
+      monsters: [],
+      skeletons: [],
+      spawnRequestInProgress: false,
+      lastSpawnRequestAt: 0
+    }));
 
     console.log("Cloud save loaded.");
   } catch (error) {

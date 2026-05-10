@@ -1,10 +1,10 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const db = require("../database");
 
 const router = express.Router();
 
-const SAVES_FILE = path.join(__dirname, "../data/saves.json");
 const USERS_FILE = path.join(__dirname, "../data/users.json");
 
 const LEADERBOARD_CACHE_MS = 10000;
@@ -46,22 +46,32 @@ function getResearchMilestones(save) {
   }, 0);
 }
 
-function buildLeaderboard() {
-  const saves = readJson(SAVES_FILE, {});
+async function buildLeaderboard() {
   const users = readJson(USERS_FILE, []);
 
   const usersById = new Map(
     users.map(user => [String(user.id), user])
   );
 
-  cachedLeaderboard = Object.entries(saves)
-    .map(([userId, entry]) => {
-      const save = entry?.save || {};
-      const user = usersById.get(String(userId));
+  const result = await db.query(`
+    SELECT
+      user_id,
+      save_data,
+      updated_at
+    FROM player_saves
+    ORDER BY updated_at DESC
+    LIMIT 500
+  `);
+
+  cachedLeaderboard = result.rows
+    .map(row => {
+      const userId = String(row.user_id);
+      const save = row.save_data || {};
+      const user = usersById.get(userId);
 
       return {
         userId,
-        username: user?.username || "Unknown",
+        username: user?.username || save.username || "Unknown",
         level: Number(save.level || 1),
         exp: Number(save.exp || 0),
         gold: Number(save.gold || 0),
@@ -70,8 +80,13 @@ function buildLeaderboard() {
         monstersKilled: Number(save.stats?.monstersKilled || 0),
         bossesKilled: Number(save.stats?.bossesKilled || 0),
         researchMilestones: getResearchMilestones(save),
-        starsCollected: Number(save.stars || save.starsEarned || save.stats?.starsCollected || 0),
-        updatedAt: entry?.updatedAt || 0
+        starsCollected: Number(
+          save.stars ||
+          save.starsEarned ||
+          save.stats?.starsCollected ||
+          0
+        ),
+        updatedAt: Number(row.updated_at || 0)
       };
     })
     .sort((a, b) => {
@@ -86,30 +101,50 @@ function buildLeaderboard() {
   return cachedLeaderboard;
 }
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const now = Date.now();
 
-  if (!cachedLeaderboard.length || now - cachedAt > LEADERBOARD_CACHE_MS) {
-    buildLeaderboard();
-  }
+  try {
+    if (!cachedLeaderboard.length || now - cachedAt > LEADERBOARD_CACHE_MS) {
+      await buildLeaderboard();
+    }
 
-  res.json({
-    success: true,
-    cached: true,
-    cachedAt,
-    leaderboard: cachedLeaderboard
-  });
+    res.json({
+      success: true,
+      cached: true,
+      source: "postgres",
+      cachedAt,
+      leaderboard: cachedLeaderboard
+    });
+  } catch (error) {
+    console.error("Failed to build leaderboard:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to load leaderboard."
+    });
+  }
 });
 
-router.post("/refresh", (req, res) => {
-  buildLeaderboard();
+router.post("/refresh", async (req, res) => {
+  try {
+    await buildLeaderboard();
 
-  res.json({
-    success: true,
-    message: "Leaderboard cache refreshed.",
-    cachedAt,
-    leaderboard: cachedLeaderboard
-  });
+    res.json({
+      success: true,
+      source: "postgres",
+      message: "Leaderboard cache refreshed.",
+      cachedAt,
+      leaderboard: cachedLeaderboard
+    });
+  } catch (error) {
+    console.error("Failed to refresh leaderboard:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to refresh leaderboard."
+    });
+  }
 });
 
 module.exports = router;
