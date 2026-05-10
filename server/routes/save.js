@@ -16,6 +16,11 @@ const MAX_MATERIAL_AMOUNT = 10_000_000;
 const MAX_EQUIPMENT_ITEMS = 500;
 const MAX_LOG_MESSAGES = 150;
 
+const {
+  loadPlayerSave,
+  savePlayerSave
+} = require("../dbSaves");
+
 function loadSaves() {
   if (!fs.existsSync(SAVES_FILE)) return {};
 
@@ -314,7 +319,7 @@ router.get("/:userId", authMiddleware, (req, res) => {
   });
 });
 
-router.post("/:userId", authMiddleware, (req, res) => {
+router.post("/:userId", authMiddleware, async (req, res) => {
   const { userId } = req.params;
 
   if (String(req.user.id) !== String(userId)) {
@@ -379,6 +384,11 @@ router.post("/:userId", authMiddleware, (req, res) => {
   };
 
   saveSaves(saves);
+
+await savePlayerSave(
+  userId,
+  validation.save
+);
 
   res.json({
     success: true,
