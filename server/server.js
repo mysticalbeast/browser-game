@@ -14,6 +14,7 @@ const eventsRoutes = require("./routes/events");
 const combatRoutes = require("./routes/combat");
 const rebirthRoutes = require("./routes/rebirth");
 const skillsRoutes = require("./routes/skills");
+const debugDbRoute = require("./routes/debugdb");
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use("/events", eventsRoutes);
 app.use("/combat", combatRoutes);
 app.use("/rebirth", rebirthRoutes);
 app.use("/skills", skillsRoutes);
+app.use("/debugdb", debugDbRoute);
 
 const PORT = process.env.PORT || 3000;
 
