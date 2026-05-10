@@ -201,6 +201,26 @@ function updateSiegeMonsters(now = Date.now()) {
   });
 }
 
+function getSiegeSpawnInterval() {
+  const siege = globalEvents.siege;
+  const now = Date.now();
+
+  const startedAt = siege.endsAt - SIEGE_DURATION_MS;
+  const elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+
+  // 0-29s = 1/sec, 30-59s = 2/sec, 60-89s = 3/sec, etc.
+  const baseSpawnsPerSecond = 1 + Math.floor(elapsedSeconds / 30);
+
+  const playerCount = Math.max(1, siege.joinedPlayers?.length || 1);
+
+  // 1 player = 100%, 5 players = 200%
+  const playerMultiplier = 1 + ((playerCount - 1) * 0.25);
+
+  const spawnsPerSecond = baseSpawnsPerSecond * playerMultiplier;
+
+  return Math.max(100, Math.floor(1000 / spawnsPerSecond));
+}
+
 function tickGlobalEvents() {
   const now = Date.now();
   const siege = globalEvents.siege;
@@ -214,7 +234,15 @@ if (now >= siege.endsAt || siege.wallHp <= 0) {
 
     if (now >= siege.nextSpawnAt) {
       spawnSiegeMonster(now);
-      siege.nextSpawnAt = now + SIEGE_SPAWN_INTERVAL_MS;
+      const playerCount = Math.max(1, siege.joinedPlayers?.length || 1);
+
+const spawnMultiplier =
+  1 + ((playerCount - 1) * 0.20);
+
+const interval =
+  SIEGE_SPAWN_INTERVAL_MS / spawnMultiplier;
+
+siege.nextSpawnAt = now + getSiegeSpawnInterval();
     }
 
     updateSiegeMonsters(now);
