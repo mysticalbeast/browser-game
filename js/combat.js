@@ -1002,6 +1002,10 @@ function hitMonster(id, forcedDamage = null, source = "player", kind = "normal")
   }
 
   if (monster.hp <= 0) {
+	  
+	      if (monster.rewardClaimed) return;
+    monster.rewardClaimed = true;
+	  
     const overkill = Math.max(0, damage - oldHp);
     const splashPercent = getTotalResearchBonus("overkillSplash");
 
@@ -1080,6 +1084,12 @@ function renderResearchGridOnly() {
 }
 
 async function requestBackendKillReward(monster, multipliers) {
+  
+    if (!monster?.combatToken) {
+    console.warn("Missing combat token on killed monster:", monster);
+    return null;
+  }
+  
   if (isLocalDevGame?.()) {
     const zone = currentZone();
 
