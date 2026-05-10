@@ -1,23 +1,64 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const crypto = require("crypto");
 const authMiddleware = require("../middleware/auth");
+const db = require("../database");
 
-const SAVES_FILE = path.join(__dirname, "../data/saves.json");
-const COMBAT_SESSIONS_FILE = path.join(__dirname, "../data/combatSessions.json");
+const {
+  loadPlayerSave,
+  savePlayerSave
+} = require("../dbSaves");
 
 const router = express.Router();
 
-function loadCombatSessions() {
-  if (!fs.existsSync(COMBAT_SESSIONS_FILE)) return {};
+async function saveCombatSession(token, session) {
+  await db.query(
+    `
+    INSERT INTO combat_sessions (
+      token,
+      session_data,
+      created_at
+    )
+    VALUES ($1, $2, $3)
+    ON CONFLICT (token)
+    DO UPDATE SET
+      session_data = EXCLUDED.session_data,
+      created_at = EXCLUDED.created_at
+    `,
+    [
+      token,
+      JSON.stringify(session),
+      Number(session.createdAt || Date.now())
+    ]
+  );
+}
 
-  try {
-    return JSON.parse(fs.readFileSync(COMBAT_SESSIONS_FILE, "utf8"));
-  } catch (error) {
-    console.error("Failed to read combatSessions.json:", error);
-    return {};
-  }
+async function loadCombatSession(token) {
+  const result = await db.query(
+    `
+    SELECT session_data
+    FROM combat_sessions
+    WHERE token = $1
+    `,
+    [String(token || "")]
+  );
+
+  return result.rows[0]?.session_data || null;
+}
+
+async function deleteCombatSession(token) {
+  await db.query(
+    `
+    DELETE FROM combat_sessions
+    WHERE token = $1
+    `,
+    [String(token || "")]
+  );
+}
+
+async function markCombatSessionUsed(token, session) {
+  session.used = true;
+
+  await saveCombatSession(token, session);
 }
 
 function saveCombatSessions(sessions) {
@@ -47,17 +88,6 @@ function rollBackendMonsterFlags(save) {
     isUber,
     isMythicUber
   };
-}
-
-function loadSaves() {
-  if (!fs.existsSync(SAVES_FILE)) return {};
-
-  try {
-    return JSON.parse(fs.readFileSync(SAVES_FILE, "utf8"));
-  } catch (error) {
-    console.error("Failed to read saves.json:", error);
-    return {};
-  }
 }
 
 function saveSaves(saves) {
@@ -659,45 +689,45 @@ function createStarterCombatSave() {
   };
 }
 
-router.post("/spawn", authMiddleware, (req, res) => {
-  const saves = loadSaves();
+router.post("/spawn", authMiddleware, async (req, res) => {
+  try {
+    let save = await loadPlayerSave(req.user.id);
 
-  if (!saves[req.user.id]?.save) {
-    saves[req.user.id] = {
-      save: createStarterCombatSave(),
-      updatedAt: Date.now()
-    };
+    if (!save) {
+      save = createStarterCombatSave();
+      await savePlayerSave(req.user.id, save);
+    }
 
-    saveSaves(saves);
+    const flags = rollBackendMonsterFlags(save);
+    const combatToken = crypto.randomUUID();
+
+    await saveCombatSession(combatToken, {
+      userId: req.user.id,
+      createdAt: Date.now(),
+      used: false,
+      isBoss: flags.isBoss,
+      isUber: flags.isUber,
+      isMythicUber: flags.isMythicUber
+    });
+
+    res.json({
+      success: true,
+      combatToken,
+      isBoss: flags.isBoss,
+      isUber: flags.isUber,
+      isMythicUber: flags.isMythicUber
+    });
+  } catch (error) {
+    console.error("Combat spawn failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Combat spawn failed."
+    });
   }
-
-  const save = saves[req.user.id].save;
-  const flags = rollBackendMonsterFlags(save);
-
-  const combatToken = crypto.randomUUID();
-  const sessions = loadCombatSessions();
-
-  sessions[combatToken] = {
-    userId: req.user.id,
-    createdAt: Date.now(),
-    used: false,
-    isBoss: flags.isBoss,
-    isUber: flags.isUber,
-    isMythicUber: flags.isMythicUber
-  };
-
-  saveCombatSessions(sessions);
-
-  res.json({
-    success: true,
-    combatToken,
-    isBoss: flags.isBoss,
-    isUber: flags.isUber,
-    isMythicUber: flags.isMythicUber
-  });
 });
 
-router.post("/kill", authMiddleware, (req, res) => {
+router.post("/kill", authMiddleware, async (req, res) => {
   const {
     zoneId,
     combatToken
@@ -712,8 +742,7 @@ router.post("/kill", authMiddleware, (req, res) => {
     });
   }
 
-  const sessions = loadCombatSessions();
-  const session = sessions[combatToken];
+    const session = await loadCombatSession(combatToken);
 
   if (!session || session.userId !== req.user.id || session.used) {
     return res.status(400).json({
@@ -725,8 +754,7 @@ router.post("/kill", authMiddleware, (req, res) => {
   const maxTokenAgeMs = 5 * 60 * 1000;
 
   if (Date.now() - Number(session.createdAt || 0) > maxTokenAgeMs) {
-    delete sessions[combatToken];
-    saveCombatSessions(sessions);
+    await deleteCombatSession(combatToken);
 
     return res.status(400).json({
       success: false,
@@ -734,24 +762,19 @@ router.post("/kill", authMiddleware, (req, res) => {
     });
   }
 
-  session.used = true;
-  sessions[combatToken] = session;
-  saveCombatSessions(sessions);
+  await markCombatSessionUsed(combatToken, session);
 
   const safeIsBoss = session.isBoss === true;
   const safeIsUber = session.isUber === true;
 
-  const saves = loadSaves();
-  const userSaveWrapper = saves[req.user.id];
+    const save = await loadPlayerSave(req.user.id);
 
-  if (!userSaveWrapper?.save) {
+  if (!save) {
     return res.status(400).json({
       success: false,
       message: "No cloud save found."
     });
   }
-
-  const save = userSaveWrapper.save;
 
   const multipliers = getBackendRewardMultipliers(
     save,
@@ -875,12 +898,7 @@ router.post("/kill", authMiddleware, (req, res) => {
 
   save.lastSeenAt = Date.now();
 
-  saves[req.user.id] = {
-    save,
-    updatedAt: Date.now()
-  };
-
-  saveSaves(saves);
+  await savePlayerSave(req.user.id, save);
 
   res.json({
     success: true,
