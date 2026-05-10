@@ -17,35 +17,6 @@ const {
 
 const router = express.Router();
 
-async function loadCombatSession(token) {
-  const result = await db.query(
-    `
-    SELECT session_data
-    FROM combat_sessions
-    WHERE token = $1
-    `,
-    [String(token || "")]
-  );
-
-  return result.rows[0]?.session_data || null;
-}
-
-async function deleteCombatSession(token) {
-  await db.query(
-    `
-    DELETE FROM combat_sessions
-    WHERE token = $1
-    `,
-    [String(token || "")]
-  );
-}
-
-async function markCombatSessionUsed(token, session) {
-  session.used = true;
-
-  await saveCombatSession(token, session);
-}
-
 function getUberDifficultyLevelFromSave(save) {
   return Number(save?.skills?.uberDifficulty || 0);
 }
