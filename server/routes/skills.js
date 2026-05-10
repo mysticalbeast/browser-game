@@ -310,6 +310,40 @@ function canPurchaseSkill(save, skillKey) {
   };
 }
 
+function rebuildUnlockedNodesFromSkills(save) {
+  const unlocked = new Set(["minotaur_category"]);
+
+  Object.entries(save.skills || {}).forEach(([skillKey, level]) => {
+    if (Number(level || 0) > 0) {
+      unlocked.add(skillKey);
+    }
+  });
+
+  if (getCategoryPoints(save, "minotaur") >= 20) {
+    unlocked.add("spells_category");
+  }
+
+  if (getCategoryPoints(save, "spells") >= 20) {
+    unlocked.add("economy_category");
+  }
+
+  if (
+    Number(save?.rebirthUpgrades?.necromancer || 0) > 0 &&
+    getCategoryPoints(save, "economy") >= 20
+  ) {
+    unlocked.add("necromancer_category");
+  }
+
+  return Array.from(unlocked);
+}
+
+function hasChildSkillUnlocked(save, skillKey) {
+  return Object.entries(PARENTS).some(([childKey, parents]) => {
+    if (Number(save.skills?.[childKey] || 0) <= 0) return false;
+    return parents.includes(skillKey);
+  });
+}
+
 router.post("/purchase", authMiddleware, (req, res) => {
   const nodeId = String(req.body?.nodeId || "");
   const skillKey = NODE_TO_SKILL[nodeId] || nodeId;
@@ -350,6 +384,67 @@ router.post("/purchase", authMiddleware, (req, res) => {
     save.unlockedNodes.push(nodeId);
   }
 
+  save.lastSeenAt = Date.now();
+
+  saves[req.user.id] = {
+    save,
+    updatedAt: Date.now()
+  };
+
+  saveSaves(saves);
+
+  res.json({
+    success: true,
+    skillPoints: save.skillPoints,
+    skills: save.skills,
+    unlockedNodes: save.unlockedNodes
+  });
+});
+
+router.post("/refund", authMiddleware, (req, res) => {
+  const nodeId = String(req.body?.nodeId || "");
+  const skillKey = NODE_TO_SKILL[nodeId] || nodeId;
+
+  const saves = loadSaves();
+  const wrapper = saves[req.user.id];
+
+  if (!wrapper?.save) {
+    return res.status(400).json({
+      success: false,
+      message: "No cloud save found."
+    });
+  }
+
+  const save = wrapper.save;
+
+  if (!save.skills || typeof save.skills !== "object") {
+    save.skills = {};
+  }
+
+  const current = Math.floor(Number(save.skills[skillKey] || 0));
+
+  if (current <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Skill is not purchased."
+    });
+  }
+
+  if (hasChildSkillUnlocked(save, skillKey)) {
+    return res.status(400).json({
+      success: false,
+      message: "Refund child skills first."
+    });
+  }
+
+  save.skills[skillKey] = current - 1;
+
+  if (save.skills[skillKey] <= 0) {
+    delete save.skills[skillKey];
+  }
+
+  save.skillPoints = Math.floor(Number(save.skillPoints || 0) + 1);
+  save.unlockedNodes = rebuildUnlockedNodesFromSkills(save);
   save.lastSeenAt = Date.now();
 
   saves[req.user.id] = {

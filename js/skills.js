@@ -293,17 +293,17 @@ function hasExclusiveModifierConflict(skillKey) {
   return false;
 }
 
-function refundSkillNode(nodeId) {
+async function refundSkillNode(nodeId) {
   const node = SKILL_NODES[nodeId];
   if (!node || !node.skill) return;
 
   const current = state.skills?.[node.skill] || 0;
+
   if (current <= 0) {
     addLog("No point to refund from this node.");
     return;
   }
 
-  // Do not allow refunding a parent while child nodes still have points.
   const childrenWithPoints = node.connectsTo
     ?.map(childId => SKILL_NODES[childId])
     .filter(child => child?.skill && (state.skills?.[child.skill] || 0) > 0) || [];
@@ -313,12 +313,27 @@ function refundSkillNode(nodeId) {
     return;
   }
 
-  state.skills[node.skill] = current - 1;
-  state.skillPoints = (state.skillPoints || 0) + 1;
+  const backendResult = await requestBackendSkillRefund(nodeId);
 
-  // If node is now empty, remove it from unlockedNodes.
-  if (state.skills[node.skill] <= 0 && Array.isArray(state.unlockedNodes)) {
-    state.unlockedNodes = state.unlockedNodes.filter(id => id !== nodeId);
+  if (!backendResult) return;
+
+  if (backendResult.localOnly) {
+    state.skills[node.skill] = current - 1;
+    state.skillPoints = (state.skillPoints || 0) + 1;
+
+    if (state.skills[node.skill] <= 0 && Array.isArray(state.unlockedNodes)) {
+      state.unlockedNodes = state.unlockedNodes.filter(id => id !== nodeId);
+    }
+  } else {
+    state.skills = {
+      ...(backendResult.skills || {})
+    };
+
+    state.skillPoints = Math.floor(Number(backendResult.skillPoints || 0));
+
+    state.unlockedNodes = Array.isArray(backendResult.unlockedNodes)
+      ? backendResult.unlockedNodes
+      : ["minotaur_category"];
   }
 
   const currentSkillTreeView = {
@@ -333,11 +348,52 @@ function refundSkillNode(nodeId) {
   skillTreeView.x = currentSkillTreeView.x;
   skillTreeView.y = currentSkillTreeView.y;
   skillTreeView.zoom = currentSkillTreeView.zoom;
+
   applySkillTreeTransform();
 
   saveGame();
 
   addLog(`Refunded 1 point from ${node.label}.`);
+}
+
+async function requestBackendSkillRefund(nodeId) {
+  if (isLocalDevGame?.()) {
+    return {
+      success: true,
+      localOnly: true
+    };
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("Login required to refund skills.", "system");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/skills/refund`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ nodeId })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.(data?.message || "Skill refund failed.", "system");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Skill refund request failed:", error);
+    showFilterNotification?.("Skill refund request failed.", "system");
+    return null;
+  }
 }
 
 async function requestBackendSkillPurchase(nodeId) {
