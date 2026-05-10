@@ -629,18 +629,49 @@ function rollBackendLoot(options) {
   return loot;
 }
 
+function createStarterCombatSave() {
+  return {
+    level: 1,
+    exp: 0,
+    gold: 0,
+    stars: 0,
+    rebirthCoins: 0,
+    zoneId: 1,
+    skills: {},
+    equipment: {},
+    equipmentInventory: [],
+    inventory: {},
+    materials: {},
+    stats: {
+      monstersKilled: 0,
+      goldEarned: 0,
+      expEarned: 0
+    },
+    monsterResearch: {},
+    fishing: {
+      shopUpgrades: {}
+    },
+    constellations: {},
+    skins: {
+      equipped: {}
+    },
+    lastSeenAt: Date.now()
+  };
+}
+
 router.post("/spawn", authMiddleware, (req, res) => {
   const saves = loadSaves();
-  const userSaveWrapper = saves[req.user.id];
 
-  if (!userSaveWrapper?.save) {
-    return res.status(400).json({
-      success: false,
-      message: "No cloud save found."
-    });
+  if (!saves[req.user.id]?.save) {
+    saves[req.user.id] = {
+      save: createStarterCombatSave(),
+      updatedAt: Date.now()
+    };
+
+    saveSaves(saves);
   }
 
-  const save = userSaveWrapper.save;
+  const save = saves[req.user.id].save;
   const flags = rollBackendMonsterFlags(save);
 
   const combatToken = crypto.randomUUID();
