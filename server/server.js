@@ -9,6 +9,7 @@ const onlineRoutes = require("./routes/online");
 const chatRoutes = require("./routes/chat");
 const adminRoutes = require("./routes/admin");
 const eventsRoutes = require("./routes/events");
+const combatRoutes = require("./routes/combat");
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/online", onlineRoutes);
 app.use("/chat", chatRoutes);
 app.use("/admin", adminRoutes);
 app.use("/events", eventsRoutes);
+app.use("/combat", combatRoutes);
 
 const PORT = process.env.PORT || 3000;
 

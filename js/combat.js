@@ -1079,7 +1079,130 @@ function renderResearchGridOnly() {
   }
 }
 
-function killMonster(monster) {
+async function requestBackendKillReward(monster, multipliers) {
+  const token = getAuthToken?.();
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/combat/kill`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        zoneId: state.zoneId,
+        isBoss: monster.isBoss === true,
+        isUber: monster.isUber === true,
+
+        goldMultiplier: multipliers.goldMultiplier,
+        expMultiplier: multipliers.expMultiplier,
+
+        essenceMultiplier: multipliers.essenceMultiplier,
+        bossLootMultiplier: multipliers.bossLootMultiplier,
+        equipmentDropMultiplier: multipliers.equipmentDropMultiplier,
+        whetstoneDropMultiplier: multipliers.whetstoneDropMultiplier,
+        doubleDropChance: multipliers.doubleDropChance,
+        extraUberLootRolls: multipliers.extraUberLootRolls
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      console.warn("Backend kill reward failed:", data.message || data.error);
+      return null;
+    }
+
+    return data.reward;
+  } catch (error) {
+    console.warn("Backend kill reward request failed:", error);
+    return null;
+  }
+}
+
+function applyBackendLoot(loot, monster) {
+  if (!loot) return;
+
+  if (!state.materials) {
+    state.materials = { ...DEFAULT_MATERIALS };
+  }
+
+  const materialColors = {
+    greenEssence: "#35d66b",
+    blueEssence: "#3aa7ff",
+    yellowEssence: "#ffd43b",
+    redEssence: "#ff4d4d",
+    whetstones: "#d6d6d6"
+  };
+
+  const materialNames = {
+    greenEssence: "Green Essence",
+    blueEssence: "Blue Essence",
+    yellowEssence: "Yellow Essence",
+    redEssence: "Red Essence",
+    whetstones: "Whetstone"
+  };
+
+  Object.entries(loot.materials || {}).forEach(([key, amount]) => {
+    if (!amount || amount <= 0) return;
+
+    state.materials[key] = (state.materials[key] || 0) + amount;
+
+    if (key === "whetstones") {
+      showFilterNotification(
+        "salvage",
+        amount > 1 ? `🔨 Found ${amount} Whetstones!` : "🔨 Found a Whetstone!"
+      );
+    } else {
+      addLog(`🧪 ${materialNames[key] || key} dropped.`, "loot");
+      showEssenceDropEffect(
+        monster.x,
+        monster.y,
+        materialColors[key] || "#ffffff",
+        `+${amount} ${materialNames[key] || key}`
+      );
+    }
+  });
+
+  if (loot.treasureChests > 0) {
+    addInventoryItem("treasureChest", loot.treasureChests);
+  }
+
+  if (loot.goldenTreasureChests > 0) {
+    addInventoryItem("goldenTreasureChest", loot.goldenTreasureChests);
+
+    showFilterNotification(
+      "loot",
+      "🟨 Golden Treasure Chest dropped!"
+    );
+  }
+
+  if (Array.isArray(loot.equipmentItems) && loot.equipmentItems.length > 0) {
+  loot.equipmentItems.forEach(item => {
+    const inserted = addItemToDepot(item);
+
+    if (inserted) {
+      addLog(`🧩 ${item.rarityName} ${item.name} dropped!`, "loot");
+    } else {
+      addLog("⚠️ Depot full. Item lost.", "system");
+    }
+  });
+
+  if (document.getElementById("depotPanel")?.style.display === "block") {
+    renderDepotPanel();
+    injectPanelHero?.("depotPanel");
+  }
+}
+
+  renderBackpack?.();
+  renderBlacksmithPanel?.();
+}
+
+async function killMonster(monster) {
   if (monster.isBoss) {
     addSkinProgress?.("bossKills", 1);
   }
@@ -1123,8 +1246,6 @@ function killMonster(monster) {
     }
   });
 
-  const zone = currentZone();
-
   const skillGoldBoost = 1 + (state.skills.deepPockets || 0) * 0.10;
   const skillExpBoost = 1 + (state.skills.experiencedHunter || 0) * 0.10;
 
@@ -1143,39 +1264,76 @@ function killMonster(monster) {
     ? 1 + (getActiveMinotaurSkinBonus?.("bossRewards") || 0)
     : 1;
 
-const baseBossRewardMultiplier =
-  (monster.isUber ? 100 : monster.isBoss ? 25 : 1) *
-  skinBossBonus;
+  const uberLootMultiplier = monster.isUber
+    ? getUberLootBonusMultiplier()
+    : 1;
 
-const uberLootMultiplier = monster.isUber
-  ? getUberLootBonusMultiplier()
-  : 1;
+  const uberExpMultiplier = monster.isUber
+    ? getUberExpBonusMultiplier()
+    : 1;
 
-const uberExpMultiplier = monster.isUber
-  ? getUberExpBonusMultiplier()
-  : 1;
+  const goldMultiplier =
+    skillGoldBoost *
+    potionGoldBoost *
+    researchGoldBoost *
+    phoenixBoost *
+    fishingGoldBoost *
+    skinBossBonus *
+    uberLootMultiplier;
 
-const goldGain = Math.floor(
-  rand(zone.gold[0], zone.gold[1]) *
-  skillGoldBoost *
-  potionGoldBoost *
-  researchGoldBoost *
-  phoenixBoost *
-  fishingGoldBoost *
-  baseBossRewardMultiplier *
-  uberLootMultiplier
-);
+  const expMultiplier =
+    skillExpBoost *
+    potionExpBoost *
+    researchExpBoost *
+    phoenixBoost *
+    fishingExpBoost *
+    skinBossBonus *
+    uberExpMultiplier;
 
-const expGain = Math.floor(
-  rand(zone.exp[0], zone.exp[1]) *
-  skillExpBoost *
-  potionExpBoost *
-  researchExpBoost *
-  phoenixBoost *
-  fishingExpBoost *
-  baseBossRewardMultiplier *
-  uberExpMultiplier
-);
+  const essenceMultiplier =
+  (1 + (state.skills.materialistic || 0) * 0.02) *
+  (1 + getTotalResearchBonus("materials"));
+
+const bossLootMultiplier =
+  monster.isBoss
+    ? 1 + (state.skills.lootHungry || 0) * 0.05
+    : 1;
+
+const equipmentDropMultiplier =
+  (1 + (state.skills.gearingUp || 0) * 0.10) *
+  (1 + getTotalResearchBonus("rareDrops")) *
+  (1 + getTotalEquipmentStat("lootChance") / 100);
+
+const whetstoneDropMultiplier =
+  (1 + getTotalResearchBonus("rareDrops")) *
+  (1 + getTotalEquipmentStat("lootChance") / 100) *
+  (1 + getTotalEquipmentStat("whetstoneChance") / 100);
+
+const doubleDropChance =
+  getTotalEquipmentStat("doubleDrop") / 100;
+
+const extraUberLootRolls =
+  monster.isUber ? getUberExtraLootRolls() : 0;
+
+const reward = await requestBackendKillReward(monster, {
+  goldMultiplier,
+  expMultiplier,
+
+  essenceMultiplier,
+  bossLootMultiplier,
+  equipmentDropMultiplier,
+  whetstoneDropMultiplier,
+  doubleDropChance,
+  extraUberLootRolls
+});
+
+  if (!reward) {
+    showFilterNotification("system", "⚠ Kill reward failed. Server rejected reward.");
+    return;
+  }
+
+  const goldGain = reward.gold || 0;
+  const expGain = reward.exp || 0;
 
   state.gold += goldGain;
   state.exp += expGain;
@@ -1183,9 +1341,9 @@ const expGain = Math.floor(
   if (!state.stats) state.stats = {};
 
   state.stats.monstersKilled = (state.stats.monstersKilled || 0) + 1;
-  
+
   recordKillForOfflineRate?.();
-  
+
   state.stats.goldEarned = (state.stats.goldEarned || 0) + goldGain;
   state.stats.expEarned = (state.stats.expEarned || 0) + expGain;
 
@@ -1194,15 +1352,7 @@ const expGain = Math.floor(
     "combat"
   );
 
-  rollEssenceDrops(monster.x, monster.y, monster);
-
-  if (monster.isBoss) {
-    rollBossEssenceDrops(monster.x, monster.y, monster.isUber);
-  }
-
-  rollEquipmentDrop(monster);
-  rollWhetstoneDrop();
-  rollTreasureChestDrop?.(monster);
+  applyBackendLoot(reward.loot, monster);
 
   state.monsters = state.monsters.filter(m => m.id !== monster.id);
 

@@ -125,7 +125,18 @@ function resetSiege(now = Date.now(), reason = "timerEnded", previousSiege = nul
   reason,
   endedAt: now,
   kills: previousSiege.kills || 0,
-  participants: previousSiege.participants || {}
+
+  participants: Object.fromEntries(
+    Object.entries(previousSiege.participants || {}).map(([userId, participant]) => {
+      return [
+        userId,
+        {
+          ...participant,
+          rewards: calculateParticipantRewards(participant, previousSiege)
+        }
+      ];
+    })
+  )
 } : null
   };
 }
@@ -260,6 +271,43 @@ siege.nextSpawnAt = now + getSiegeSpawnInterval();
   if (Math.random() < SIEGE_START_CHANCE) {
     startSiege(now);
   }
+}
+
+function calculateParticipantRewards(participant, siege) {
+  const totalDamage = Object.values(siege.participants || {}).reduce((sum, player) => {
+    return sum + (player.damage || 0);
+  }, 0);
+
+  if (!participant || totalDamage <= 0) {
+    return null;
+  }
+
+  const contributionShare =
+    Math.max(0, Math.min(1, (participant.damage || 0) / totalDamage));
+
+  const totalKills = siege.kills || 0;
+
+  const goldPool = totalKills * 250;
+  const expPool = totalKills * 250;
+  const starPool = totalKills * 2;
+
+  return {
+    contributionShare,
+
+    gold: Math.floor(goldPool * contributionShare),
+    exp: Math.floor(expPool * contributionShare),
+    stars: Math.floor(starPool * contributionShare),
+
+    whetstones: Math.floor(totalKills * 0.05 * contributionShare),
+    silverTokens: Math.floor(totalKills * 0.02 * contributionShare),
+
+    greenEssence: Math.floor(totalKills * 0.12 * contributionShare),
+    blueEssence: Math.floor(totalKills * 0.07 * contributionShare),
+    yellowEssence: Math.floor(totalKills * 0.035 * contributionShare),
+    redEssence: Math.floor(totalKills * 0.015 * contributionShare),
+
+    salvageMaterials: Math.floor(totalKills * 0.10 * contributionShare)
+  };
 }
 
 router.get("/", (req, res) => {

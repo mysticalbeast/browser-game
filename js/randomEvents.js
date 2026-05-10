@@ -209,64 +209,6 @@ if (isInSiegeZone()) {
   saveGame();
 }
 
-function getSiegeContributionShare() {
-  const result = state.siegeEvent?.participantResult;
-  const participants = state.siegeEvent?.lastResult?.participants || {};
-
-  if (!result || !participants) return 0;
-
-  const totalDamage = Object.values(participants).reduce((sum, player) => {
-    return sum + (player.damage || 0);
-  }, 0);
-
-  if (totalDamage <= 0) return 0;
-
-  return Math.max(0, Math.min(1, (result.damage || 0) / totalDamage));
-}
-
-function calculateSiegeContributionRewards(kills, contributionShare) {
-  const zone = getSiegeRewardZone();
-
-  const safeKills = Math.max(0, kills || 0);
-  const safeShare = Math.max(0, Math.min(1, contributionShare || 0));
-
-  const skinSiegeBonus =
-    1 + (getActiveMinotaurSkinBonus?.("siegeRewards") || 0);
-
-  const averageGold = Math.floor((zone.gold[0] + zone.gold[1]) / 2);
-  const averageExp = Math.floor((zone.exp[0] + zone.exp[1]) / 2);
-
-  const totalGoldPool = Math.floor(
-    safeKills *
-    averageGold *
-    SIEGE_GOLD_EXP_BASE_MULTIPLIER *
-    skinSiegeBonus
-  );
-
-  const totalExpPool = Math.floor(
-    safeKills *
-    averageExp *
-    SIEGE_GOLD_EXP_BASE_MULTIPLIER *
-    skinSiegeBonus
-  );
-
-  return {
-    gold: Math.floor(totalGoldPool * safeShare),
-    exp: Math.floor(totalExpPool * safeShare),
-    stars: Math.floor((safeKills * (1 + Math.floor((state.level || 1) / 10))) * safeShare),
-
-    whetstones: Math.floor((safeKills * 0.06) * safeShare),
-    silverTokens: Math.floor((safeKills * 0.025) * safeShare),
-
-    greenEssence: Math.floor((safeKills * 0.12) * safeShare),
-    blueEssence: Math.floor((safeKills * 0.07) * safeShare),
-    yellowEssence: Math.floor((safeKills * 0.035) * safeShare),
-    redEssence: Math.floor((safeKills * 0.015) * safeShare),
-
-    salvageMaterials: Math.floor((safeKills * 0.12) * safeShare)
-  };
-}
-
 function finishSiegeEvent(reason = "ended") {
   if (!state.siegeEvent?.active) return;
 
@@ -281,9 +223,10 @@ function finishSiegeEvent(reason = "ended") {
   const kills = state.siegeEvent.kills || 0;
   const survivedSeconds = getSiegeElapsedSeconds();
 
-const contributionShare = getSiegeContributionShare();
+const participantResult = state.siegeEvent.participantResult || {};
 
-const rewards = calculateSiegeContributionRewards(kills, contributionShare);
+const rewards = participantResult.rewards || {};
+const contributionShare = rewards.contributionShare || 0;
 
 const goldReward = rewards.gold || 0;
 const expReward = rewards.exp || 0;
