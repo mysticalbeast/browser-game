@@ -121,13 +121,16 @@ async function createMonster() {
   if (state.monsters.length >= getMaxMonsters()) return;
 
   state.spawnRequestInProgress = true;
+  
+  state.lastSpawnRequestAt = Date.now();
 
   try {
     const zone = currentZone();
 
     if (
+      !zone ||
       zone.noMonsters ||
-      !zone.monsters ||
+      !Array.isArray(zone.monsters) ||
       zone.monsters.length === 0
     ) {
       return;
@@ -140,7 +143,7 @@ async function createMonster() {
     const backendSpawn = await requestBackendMonsterSpawn();
 
     if (!backendSpawn?.combatToken) {
-      console.warn("Missing combat token from backend.");
+      console.warn("Missing combat token from backend spawn.");
       return;
     }
 
@@ -159,7 +162,7 @@ async function createMonster() {
       1;
 
     const monster = {
-	  id: Math.random().toString(36).slice(2),
+      id: Math.random().toString(36).slice(2),
       combatToken: backendSpawn.combatToken,
 
       name: isMythicUber
@@ -180,7 +183,6 @@ async function createMonster() {
     };
 
     state.monsters.push(monster);
-
     renderMonster(monster);
 
   } catch (error) {

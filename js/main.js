@@ -382,16 +382,29 @@ function startSkeletonRenderLoop() {
 }
 
 function gameLoop() {
-	
   if (window.gamePausedForAuth) return;
-  
-  const zone = currentZone();
-
-  if (!zone.noMonsters && state.monsters.length < getMaxMonsters()) {
-    createMonster();
-  }
 
   const now = Date.now();
+
+  if (
+    state.spawnRequestInProgress &&
+    state.lastSpawnRequestAt &&
+    now - state.lastSpawnRequestAt > 10000
+  ) {
+    console.warn("Spawn request lock timed out. Resetting.");
+    state.spawnRequestInProgress = false;
+  }
+
+  const zone = currentZone();
+
+  if (
+    zone &&
+    !zone.noMonsters &&
+    state.monsters.length < getMaxMonsters() &&
+    !state.spawnRequestInProgress
+  ) {
+    createMonster();
+  }
 
   cleanupSkeletons(now);
   moveSkeletons(now);
@@ -426,19 +439,22 @@ function gameLoop() {
         let finalDamage = roll.damage;
         const isCritical = roll.critical;
 
-        // Opening Strike: first Minotaur hit on a monster deals 50% bonus damage.
         if (hasSkill("openingStrike") && !hasMinotaurHitTarget(monster.id)) {
           finalDamage *= 1.5;
-          notifyMinotaurEffect("Opening Strike", `First hit bonus applied to ${monster.name || "monster"}.`);
+          notifyMinotaurEffect(
+            "Opening Strike",
+            `First hit bonus applied to ${monster.name || "monster"}.`
+          );
         }
 
-        // Executioner Shot: +40% damage against monsters below 30% HP.
         if (hasSkill("executionerShot") && getMonsterHpPercent(monster) <= 30) {
           finalDamage *= 1.4;
-          notifyMinotaurEffect("Executioner Shot", `Low-health bonus applied to ${monster.name || "monster"}.`);
+          notifyMinotaurEffect(
+            "Executioner Shot",
+            `Low-health bonus applied to ${monster.name || "monster"}.`
+          );
         }
 
-        // Battle Rhythm: +5% damage per consecutive hit on same target, max +50%.
         if (hasSkill("battleRhythm")) {
           const rhythmMultiplier = getBattleRhythmMultiplier(monster.id);
 
@@ -453,7 +469,7 @@ function gameLoop() {
         }
 
         finalDamage *= getTotalSummonDamageMultiplier();
-	    finalDamage = Math.floor(finalDamage);
+        finalDamage = Math.floor(finalDamage);
 
         hitMonster(
           monster.id,
