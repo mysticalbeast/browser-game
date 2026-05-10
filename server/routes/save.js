@@ -338,19 +338,39 @@ router.post("/:userId", authMiddleware, (req, res) => {
 
   const validation = validateAndSanitizeSave(save, existingSave);
 
-  if (validation.ok && existingSave) {
-    validation.save.skills = existingSave.skills || {};
-    validation.save.skillPoints = Math.floor(Number(existingSave.skillPoints || 0));
-    validation.save.unlockedNodes = Array.isArray(existingSave.unlockedNodes)
-      ? existingSave.unlockedNodes
-      : ["minotaur_category"];
-  }
-
   if (!validation.ok) {
     return res.status(400).json({
       success: false,
       message: validation.message
     });
+  }
+
+  if (existingSave) {
+    // =========================
+    // BACKEND-OWNED SKILLS
+    // =========================
+
+    validation.save.skills = existingSave.skills || {};
+
+    validation.save.skillPoints = Math.floor(
+      Number(existingSave.skillPoints || 0)
+    );
+
+    validation.save.unlockedNodes = Array.isArray(existingSave.unlockedNodes)
+      ? existingSave.unlockedNodes
+      : ["minotaur_category"];
+
+    // =========================
+    // BACKEND-OWNED REBIRTH
+    // =========================
+
+    validation.save.rebirth = existingSave.rebirth || {
+      count: 0,
+      coins: 0
+    };
+
+    validation.save.rebirthUpgrades =
+      existingSave.rebirthUpgrades || {};
   }
 
   saves[userId] = {

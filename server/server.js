@@ -10,6 +10,7 @@ const chatRoutes = require("./routes/chat");
 const adminRoutes = require("./routes/admin");
 const eventsRoutes = require("./routes/events");
 const combatRoutes = require("./routes/combat");
+const rebirthRoutes = require("./routes/rebirth");
 const skillsRoutes = require("./routes/skills");
 
 const app = express();
@@ -34,6 +35,7 @@ app.use("/chat", chatRoutes);
 app.use("/admin", adminRoutes);
 app.use("/events", eventsRoutes);
 app.use("/combat", combatRoutes);
+app.use("/rebirth", rebirthRoutes);
 app.use("/skills", skillsRoutes);
 
 const PORT = process.env.PORT || 3000;

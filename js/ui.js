@@ -5609,7 +5609,7 @@ function getRebirthUpgradeCost(upgrade) {
   return Math.floor(upgrade.cost * Math.pow(1.5, level));
 }
 
-function buyRebirthUpgrade(key) {
+async function buyRebirthUpgrade(key) {
   if (!state.rebirthUpgrades) state.rebirthUpgrades = {};
   if (!state.rebirth) state.rebirth = { count: 0, coins: 0 };
 
@@ -5631,8 +5631,17 @@ function buyRebirthUpgrade(key) {
     return;
   }
 
-state.rebirth.coins -= cost;
-state.rebirthUpgrades[key] = owned + 1;
+const backendResult = await requestBackendRebirthUpgrade(key);
+
+if (!backendResult) return;
+
+if (backendResult.localOnly) {
+  state.rebirth.coins -= cost;
+  state.rebirthUpgrades[key] = owned + 1;
+} else {
+  state.rebirth = backendResult.rebirth || state.rebirth;
+  state.rebirthUpgrades = backendResult.rebirthUpgrades || state.rebirthUpgrades;
+}
 
 renderNecromancerVisual();
 
