@@ -403,8 +403,13 @@ router.post("/:userId", authMiddleware, async (req, res) => {
     });
   }
 
-  const saves = loadSaves();
-  const existingSave = saves[userId]?.save || null;
+const saves = loadSaves();
+
+let existingSave = await loadPlayerSave(userId);
+
+if (!existingSave) {
+  existingSave = saves[userId]?.save || null;
+}
 
 const persistentSave = sanitizePersistentSave(save);
 const validation = validateAndSanitizeSave(persistentSave, existingSave);
