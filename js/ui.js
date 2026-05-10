@@ -7118,8 +7118,15 @@ async function renderZonePlayers() {
       const marker = document.createElement("div");
       marker.className = "zonePlayerMarker";
 
-      marker.style.left = `${80 + index * 70}px`;
-      marker.style.bottom = "32px";
+      if (typeof isInSiegeZone === "function" && isInSiegeZone()) {
+  marker.classList.add("siegeParticipantMarker");
+
+  marker.style.left = `${120 + index * 80}px`;
+  marker.style.bottom = "180px";
+} else {
+  marker.style.left = `${80 + index * 70}px`;
+  marker.style.bottom = "32px";
+}
 
       marker.innerHTML = `
         <div class="zonePlayerSprite">🧍</div>
