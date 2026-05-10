@@ -7093,3 +7093,42 @@ panel.ondrop = handleLoadoutPanelDrop;
     <div class="loadoutStashGrid">${stashHtml}</div>
   `;
 }
+
+async function renderZonePlayers() {
+  const arenaEl = document.getElementById("arena");
+  if (!arenaEl) return;
+
+  document.querySelectorAll(".zonePlayerMarker").forEach(el => el.remove());
+
+  const currentUser = getLoggedInUser?.();
+  if (!currentUser) return;
+
+  try {
+    const response = await fetch(`${API_URL}/online`);
+    const data = await response.json();
+
+    if (!data.success || !Array.isArray(data.players)) return;
+
+    const players = data.players.filter(player =>
+      String(player.userId) !== String(currentUser.id) &&
+      Number(player.zoneId) === Number(state.zoneId)
+    );
+
+    players.forEach((player, index) => {
+      const marker = document.createElement("div");
+      marker.className = "zonePlayerMarker";
+
+      marker.style.left = `${80 + index * 70}px`;
+      marker.style.bottom = "32px";
+
+      marker.innerHTML = `
+        <div class="zonePlayerSprite">🧍</div>
+        <div class="zonePlayerName">${player.username} Lv.${player.level}</div>
+      `;
+
+      arenaEl.appendChild(marker);
+    });
+  } catch (error) {
+    console.warn("Failed to render zone players:", error);
+  }
+}

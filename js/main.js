@@ -626,17 +626,26 @@ function initGame() {
   backpack = document.getElementById("backpack");
 
   loadGame();
+
   initializeInventory?.();
   initializeFishing?.();
   initializeSkins?.();
+
   initMonsterNameCache();
+
   calculateOfflineGains();
   renderOfflinePopup();
+
   initBackpack();
+
   renderBackpack?.();
+
   bindEvents();
+
   setupOfflineGainTracking();
+
   initSummonVisual();
+
   updateUI();
 
   startSkeletonRenderLoop();
@@ -648,6 +657,7 @@ function initGame() {
 
   setInterval(() => {
     if (window.gamePausedForAuth) return;
+
     gameLoop();
   }, 150);
 
@@ -655,11 +665,13 @@ function initGame() {
     if (window.gamePausedForAuth) return;
 
     updateRewardCoins();
+
     renderLeftSpellBox();
     renderSpellInfo();
 
     updateObservatoryNotification();
     updateResearchBreakthroughNotification();
+
     updateSiegeNotification?.();
     cleanupSiegeIfInactiveOrWrongZone?.();
 
@@ -676,6 +688,7 @@ function initGame() {
 
   setInterval(() => {
     if (window.gamePausedForAuth) return;
+
     saveGame();
   }, 15000);
 
@@ -683,6 +696,7 @@ function initGame() {
     if (window.gamePausedForAuth) return;
 
     const scorePanel = document.getElementById("scorePanel");
+
     if (scorePanel?.style.display === "block") {
       renderScorePanel?.();
     }
@@ -690,6 +704,7 @@ function initGame() {
 
   setInterval(() => {
     if (window.gamePausedForAuth) return;
+
     sendOnlineHeartbeat?.();
   }, 30000);
 
@@ -697,8 +712,21 @@ function initGame() {
     updateOnlinePlayersUI?.();
   }, 10000);
 
+  // =========================
+  // ZONE PLAYER RENDERING
+  // =========================
+
+  setInterval(() => {
+    if (window.gamePausedForAuth) return;
+
+    renderZonePlayers?.();
+  }, 10000);
+
   sendOnlineHeartbeat?.();
+
   updateOnlinePlayersUI?.();
+
+  renderZonePlayers?.();
 }
 
 initGame();
