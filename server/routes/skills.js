@@ -203,6 +203,32 @@ function hasExclusiveModifierConflict(save, skillKey) {
   return getDualModifierCount(save) >= getDualModifierLimit(save);
 }
 
+function getEarnedSkillPointsForLevel(level) {
+  const safeLevel = Math.max(1, Math.floor(Number(level || 1)));
+
+  if (safeLevel <= 50) {
+    return safeLevel - 1;
+  }
+
+  return 49 + Math.floor((safeLevel - 50) / 3);
+}
+
+function getSpentSkillPoints(save) {
+  return Object.values(save.skills || {}).reduce((total, value) => {
+    return total + Math.max(0, Math.floor(Number(value || 0)));
+  }, 0);
+}
+
+function syncBackendSkillPoints(save) {
+  const earned = getEarnedSkillPointsForLevel(save.level);
+  const spent = getSpentSkillPoints(save);
+  const available = Math.max(0, earned - spent);
+
+  save.skillPoints = available;
+
+  return available;
+}
+
 function canPurchaseSkill(save, skillKey) {
   const def = SKILL_DEFS[skillKey];
 
@@ -412,6 +438,8 @@ router.post("/refund", authMiddleware, async (req, res) => {
     if (!save.skills || typeof save.skills !== "object") {
       save.skills = {};
     }
+
+	syncBackendSkillPoints(save);
 
     const current = Math.floor(Number(save.skills[skillKey] || 0));
 
