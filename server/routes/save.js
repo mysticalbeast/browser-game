@@ -338,6 +338,14 @@ router.post("/:userId", authMiddleware, (req, res) => {
 
   const validation = validateAndSanitizeSave(save, existingSave);
 
+  if (validation.ok && existingSave) {
+    validation.save.skills = existingSave.skills || {};
+    validation.save.skillPoints = Math.floor(Number(existingSave.skillPoints || 0));
+    validation.save.unlockedNodes = Array.isArray(existingSave.unlockedNodes)
+      ? existingSave.unlockedNodes
+      : ["minotaur_category"];
+  }
+
   if (!validation.ok) {
     return res.status(400).json({
       success: false,

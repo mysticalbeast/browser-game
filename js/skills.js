@@ -340,7 +340,47 @@ function refundSkillNode(nodeId) {
   addLog(`Refunded 1 point from ${node.label}.`);
 }
 
-function clickSkillNode(nodeId) {
+async function requestBackendSkillPurchase(nodeId) {
+  if (isLocalDevGame?.()) {
+    return {
+      success: true,
+      localOnly: true
+    };
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("Login required to purchase skills.", "system");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/skills/purchase`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ nodeId })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.(data?.message || "Skill purchase failed.", "system");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Skill purchase request failed:", error);
+    showFilterNotification?.("Skill purchase request failed.", "system");
+    return null;
+  }
+}
+
+async function clickSkillNode(nodeId) {
   const node = SKILL_NODES[nodeId];
   if (!node) return;
 
@@ -363,23 +403,40 @@ function clickSkillNode(nodeId) {
   const skillDef = getSkillDef(node.skill);
   const current = state.skills[node.skill] || 0;
   const max = getSkillMax(skillDef);
-  
+
   if (skillDef?.modifier && hasExclusiveModifierConflict(node.skill)) {
-  addLog("You can only choose one modifier from this pair.");
-  return;
-}
+    addLog("You can only choose one modifier from this pair.");
+    return;
+  }
 
   if (current >= max) {
     addLog(`${skillDef?.name || "Skill"} is already maxed.`);
     return;
   }
 
-  if (!state.unlockedNodes.includes(nodeId)) {
-    state.unlockedNodes.push(nodeId);
-  }
+  const backendResult = await requestBackendSkillPurchase(nodeId);
 
-  state.skillPoints--;
-  applyNodeEffect(node);
+  if (!backendResult) return;
+
+  if (backendResult.localOnly) {
+    if (!state.unlockedNodes.includes(nodeId)) {
+      state.unlockedNodes.push(nodeId);
+    }
+
+    state.skillPoints--;
+    applyNodeEffect(node);
+  } else {
+    state.skills = {
+      ...state.skills,
+      ...(backendResult.skills || {})
+    };
+
+    state.skillPoints = Math.floor(Number(backendResult.skillPoints || 0));
+
+    state.unlockedNodes = Array.isArray(backendResult.unlockedNodes)
+      ? backendResult.unlockedNodes
+      : state.unlockedNodes;
+  }
 
   const currentSkillTreeView = {
     x: skillTreeView.x,
