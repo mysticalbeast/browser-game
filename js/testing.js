@@ -37,6 +37,64 @@ function spawnForcedBoss(isUber = false) {
   );
 }
 
+async function openAdminDeleteSaveWindow() {
+  const username = prompt("Enter the username of the player save you want to delete:");
+
+  if (!username || !username.trim()) {
+    return;
+  }
+
+  const trimmedUsername = username.trim();
+
+  const confirmName = prompt(
+    `Type the username again to confirm deleting ${trimmedUsername}'s cloud save:`
+  );
+
+  if (confirmName !== trimmedUsername) {
+    showFilterNotification("system", "❌ Delete cancelled. Username confirmation did not match.");
+    return;
+  }
+
+  const adminSecret = prompt("Enter admin secret:");
+
+  if (!adminSecret) {
+    showFilterNotification("system", "❌ Delete cancelled. Missing admin secret.");
+    return;
+  }
+
+  const finalConfirm = confirm(
+    `Are you absolutely sure you want to delete the cloud save for "${trimmedUsername}"?`
+  );
+
+  if (!finalConfirm) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/admin/save/${encodeURIComponent(trimmedUsername)}`, {
+      method: "DELETE",
+      headers: {
+        "x-admin-secret": adminSecret
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      showFilterNotification(
+        "system",
+        `❌ Delete failed: ${data.message || data.error || "Unknown error."}`
+      );
+      return;
+    }
+
+    showFilterNotification("system", `✅ ${data.message}`);
+  } catch (error) {
+    console.error(error);
+    showFilterNotification("system", "❌ Delete failed. Could not reach server.");
+  }
+}
+
 function bindTestingButtons() {
   document.getElementById("addGoldBtn").onclick = () => {
     state.gold += 1000;
@@ -53,29 +111,29 @@ function bindTestingButtons() {
   };
 
   document.getElementById("addLevelBtn").onclick = () => {
-  const newLevel = state.level + 1;
+    const newLevel = state.level + 1;
 
-  let gainedPoint = false;
+    let gainedPoint = false;
 
-  if (newLevel <= 50) {
-    state.skillPoints++;
-    gainedPoint = true;
-  } else if (newLevel % 3 === 0) {
-    state.skillPoints++;
-    gainedPoint = true;
-  }
+    if (newLevel <= 50) {
+      state.skillPoints++;
+      gainedPoint = true;
+    } else if (newLevel % 3 === 0) {
+      state.skillPoints++;
+      gainedPoint = true;
+    }
 
-  state.level = newLevel;
-  state.exp = 0;
+    state.level = newLevel;
+    state.exp = 0;
 
-  showFilterNotification(
-    "system",
-    `🧪 Testing: level increased to ${state.level}.${gainedPoint ? " (+1 skill point)" : ""}`
-  );
+    showFilterNotification(
+      "system",
+      `🧪 Testing: level increased to ${state.level}.${gainedPoint ? " (+1 skill point)" : ""}`
+    );
 
-  updateUI();
-  saveGame();
-};
+    updateUI();
+    saveGame();
+  };
 
   document.getElementById("removeLevelBtn").onclick = () => {
     state.level = Math.max(1, state.level - 1);
@@ -218,13 +276,13 @@ function bindTestingButtons() {
     saveGame();
   };
 
-const addSkinShardsBtn = document.createElement("button");
-addSkinShardsBtn.className = "upgradeBtn";
-addSkinShardsBtn.textContent = "+25 Skin Shards";
+  const addSkinShardsBtn = document.createElement("button");
+  addSkinShardsBtn.className = "upgradeBtn";
+  addSkinShardsBtn.textContent = "+25 Skin Shards";
 
-addSkinShardsBtn.onclick = () => {
-  addSkinShards?.(25);
-};
+  addSkinShardsBtn.onclick = () => {
+    addSkinShards?.(25);
+  };
 
   const spawnUberBossBtn = document.createElement("button");
   spawnUberBossBtn.className = "upgradeBtn";
@@ -267,22 +325,13 @@ addSkinShardsBtn.onclick = () => {
   resetBtn.parentNode.insertBefore(spawnBossBtn, resetBtn);
   resetBtn.parentNode.insertBefore(spawnUberBossBtn, resetBtn);
   resetBtn.parentNode.insertBefore(addRebirthCoinsBtn, resetBtn);
+  resetBtn.parentNode.insertBefore(addSkinShardsBtn, resetBtn);
 
   if (resetBtn) {
+    resetBtn.textContent = "Delete Player Save";
+
     resetBtn.onclick = () => {
-      const confirmed = confirm("Reset all save data? This cannot be undone.");
-      if (!confirmed) return;
-
-      window.isResettingSave = true;
-
-      localStorage.setItem("forceResetSave", "1");
-
-      localStorage.removeItem(SAVE_KEY);
-      localStorage.removeItem("localTapMonsterGameSave_modular_v1");
-      localStorage.removeItem("browserGameSave");
-      localStorage.removeItem("idleGameSave");
-
-      location.reload();
+      openAdminDeleteSaveWindow();
     };
   }
 }

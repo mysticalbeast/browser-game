@@ -89,12 +89,18 @@ async function sendOnlineHeartbeat() {
   if (!token || window.gamePausedForAuth) return;
 
   try {
-    await fetch(`${API_URL}/online/heartbeat`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    });
+await fetch(`${API_URL}/online/heartbeat`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    level: state.level || 1,
+    zoneId: state.zoneId || 1,
+    zoneName: currentZone?.()?.name || "Unknown"
+  })
+});
   } catch (error) {
     console.warn("Online heartbeat failed:", error);
   }

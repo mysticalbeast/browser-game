@@ -21,9 +21,16 @@ function getOnlineList() {
 }
 
 router.post("/heartbeat", authMiddleware, (req, res) => {
+  const level = Number(req.body.level || 1);
+  const zoneId = Number(req.body.zoneId || 1);
+  const zoneName = String(req.body.zoneName || "Unknown");
+
   onlinePlayers.set(String(req.user.id), {
     userId: req.user.id,
     username: req.user.username,
+    level,
+    zoneId,
+    zoneName,
     lastSeenAt: Date.now()
   });
 
