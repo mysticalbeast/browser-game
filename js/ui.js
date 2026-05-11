@@ -852,25 +852,27 @@ function claimOfflineRewards() {
 
   data.claimed = true;
 
-  const startLevel = state.level;
+  if (isLocalDevGame?.()) {
+    const startLevel = state.level;
 
-  state.gold += data.totalGold || 0;
-  state.exp += data.totalExp || 0;
+    state.gold += data.totalGold || 0;
+    state.exp += data.totalExp || 0;
 
-  Object.keys(data.essenceGains || {}).forEach(key => {
-    state.materials[key] = (state.materials[key] || 0) + (data.essenceGains[key] || 0);
-  });
+    Object.keys(data.essenceGains || {}).forEach(key => {
+      state.materials[key] = (state.materials[key] || 0) + (data.essenceGains[key] || 0);
+    });
 
-  Object.keys(data.salvageGains || {}).forEach(key => {
-    state.salvageMaterials[key] = (state.salvageMaterials[key] || 0) + (data.salvageGains[key] || 0);
-  });
+    Object.keys(data.salvageGains || {}).forEach(key => {
+      state.salvageMaterials[key] = (state.salvageMaterials[key] || 0) + (data.salvageGains[key] || 0);
+    });
 
-  state.materials.whetstones =
-    (state.materials.whetstones || 0) + (data.whetstones || 0);
+    state.materials.whetstones =
+      (state.materials.whetstones || 0) + (data.whetstones || 0);
 
-  checkLevelUp();
+    checkLevelUp();
 
-  data.gainedLevels = state.level - startLevel;
+    data.gainedLevels = state.level - startLevel;
+  }
 
   state.offlineSummary = null;
 

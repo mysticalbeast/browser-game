@@ -265,7 +265,97 @@ function estimateOfflineLevels(expGain) {
   return gained;
 }
 
-function calculateOfflineGains() {
+async function requestBackendOfflineClaim() {
+  if (isLocalDevGame?.()) {
+    return null;
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/offline/claim`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      console.warn("Offline claim failed:", data?.message || data);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Offline claim request failed:", error);
+    return null;
+  }
+}
+
+function applyBackendOfflineSavePayload(payload) {
+  if (!payload?.save) return;
+
+  if (typeof payload.save.level === "number") {
+    state.level = payload.save.level;
+  }
+
+  if (typeof payload.save.exp === "number") {
+    state.exp = payload.save.exp;
+  }
+
+  if (typeof payload.save.gold === "number") {
+    state.gold = payload.save.gold;
+  }
+
+  if (typeof payload.save.skillPoints === "number") {
+    state.skillPoints = payload.save.skillPoints;
+  }
+
+  if (payload.save.materials && typeof payload.save.materials === "object") {
+    state.materials = payload.save.materials;
+  }
+
+  if (payload.save.salvageMaterials && typeof payload.save.salvageMaterials === "object") {
+    state.salvageMaterials = payload.save.salvageMaterials;
+  }
+
+  if (payload.save.stats && typeof payload.save.stats === "object") {
+    state.stats = payload.save.stats;
+  }
+}
+
+async function calculateOfflineGains() {
+  if (!isLocalDevGame?.()) {
+    const result = await requestBackendOfflineClaim();
+
+    if (!result) return;
+
+    if (!result.claimed || !result.summary) {
+      state.offlineSummary = null;
+      return;
+    }
+
+    applyBackendOfflineSavePayload(result);
+
+    state.offlineSummary = {
+      ...result.summary,
+      claimed: false
+    };
+
+    renderOfflinePopup();
+    updateUI?.();
+    saveGame?.();
+
+    return;
+  }
+
   if (!state.lastSeenAt) {
     state.lastSeenAt = Date.now();
     return;
