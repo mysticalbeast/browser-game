@@ -93,6 +93,15 @@ function findEmptyDepotSlot(save) {
   return null;
 }
 
+function getItemSellValue(item) {
+  if (!item) return 0;
+
+  const tier = Number(item.tier || 1);
+  const rarityMulti = getRarityValueMultiplier(item.rarity);
+
+  return Math.floor(100 * tier * rarityMulti);
+}
+
 function isValidEquipmentItem(item) {
   if (!item || typeof item !== "object") return false;
   if (!VALID_EQUIPMENT_TYPES.includes(item.type)) return false;
@@ -418,6 +427,84 @@ router.post("/enhance", authMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Enhance item failed."
+    });
+  }
+});
+
+router.post("/sell", authMiddleware, async (req, res) => {
+  try {
+    const tabIndex = Math.floor(Number(req.body?.tabIndex));
+    const slotIndex = Math.floor(Number(req.body?.slotIndex));
+
+    if (!Number.isInteger(tabIndex) || !Number.isInteger(slotIndex)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid depot slot."
+      });
+    }
+
+    const save = await loadPlayerSave(req.user.id);
+
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
+    }
+
+    ensureDepot(save);
+
+    const tab = save.depot.tabs[tabIndex];
+
+    if (!tab || slotIndex < 0 || slotIndex >= tab.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid depot slot."
+      });
+    }
+
+    const item = tab[slotIndex];
+
+    if (!isValidEquipmentItem(item)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid equipment item."
+      });
+    }
+
+    const value = getItemSellValue(item);
+
+    save.gold = Math.floor(Number(save.gold || 0) + value);
+
+    if (!save.stats || typeof save.stats !== "object") {
+      save.stats = {};
+    }
+
+    save.stats.goldEarned = Math.floor(
+      Number(save.stats.goldEarned || 0) + value
+    );
+
+    tab[slotIndex] = null;
+    compactDepotTab(save, tabIndex);
+
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
+
+    res.json({
+      success: true,
+      item,
+      value,
+      depot: save.depot,
+      gold: save.gold,
+      stats: save.stats
+    });
+  } catch (error) {
+    console.error("Sell item failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Sell item failed."
     });
   }
 });

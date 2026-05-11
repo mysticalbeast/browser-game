@@ -1095,8 +1095,74 @@ function getSalvageAmount(item) {
   return Math.max(1, Math.floor(tier * rarityMulti));
 }
 
-function sellDepotItem(tabIndex, slotIndex, silent = false) {
+async function requestBackendSellDepotItem(tabIndex, slotIndex) {
+  if (isLocalDevGame?.()) {
+    return {
+      localOnly: true
+    };
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("system", "Login required to sell items.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/equipment/sell`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        tabIndex,
+        slotIndex
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.("system", data?.message || "Sell item failed.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Sell item request failed:", error);
+    showFilterNotification?.("system", "Sell item request failed.");
+    return null;
+  }
+}
+
+async function sellDepotItem(tabIndex, slotIndex, silent = false) {
   if (!silent) hideItemTooltip();
+
+  if (!isLocalDevGame?.()) {
+    const result = await requestBackendSellDepotItem(tabIndex, slotIndex);
+
+    if (!result) return;
+
+    state.depot = result.depot || state.depot;
+    state.gold = typeof result.gold === "number" ? result.gold : state.gold;
+    state.stats = result.stats || state.stats;
+
+    if (!silent) {
+      showFilterNotification(
+        "sell",
+        `💰 Sold ${result.item.rarityName} ${result.item.name} (+${fmt(result.value)} gold)`
+      );
+
+      updateUI();
+      renderDepotPanel();
+      injectPanelHero?.("depotPanel");
+      saveGame();
+    }
+
+    return;
+  }
 
   const item = state.depot.tabs[tabIndex]?.[slotIndex];
   if (!item) return;
@@ -1115,7 +1181,7 @@ function sellDepotItem(tabIndex, slotIndex, silent = false) {
 
     updateUI();
     renderDepotPanel();
-	injectPanelHero?.("depotPanel");
+    injectPanelHero?.("depotPanel");
     saveGame();
   }
 }

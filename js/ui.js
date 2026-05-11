@@ -4806,7 +4806,7 @@ function compactDepotTab(tabIndex) {
   state.depot.tabs[tabIndex] = [...compacted, ...emptySlots];
 }
 
-function sellCurrentDepotTab() {
+async function sellCurrentDepotTab() {
   const activeTab = state.depot.activeTab || 0;
   const items = state.depot.tabs[activeTab];
 
@@ -4817,7 +4817,7 @@ function sellCurrentDepotTab() {
 
   for (let i = items.length - 1; i >= 0; i--) {
     if (items[i]) {
-      sellDepotItem(activeTab, i, true);
+      await sellDepotItem(activeTab, i, true);
     }
   }
 
