@@ -218,7 +218,6 @@ function setupOfflineGainTracking() {
     window.isAwayForOffline = false;
     window.offlineGainProcessing = true;
 
-    calculateOfflineGains();
     renderOfflinePopup?.();
     updateUI?.();
 
