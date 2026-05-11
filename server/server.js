@@ -17,6 +17,7 @@ const skillsRoutes = require("./routes/skills");
 const fishingRoutes = require("./routes/fishing");
 const chestRoutes = require("./routes/chests");
 const offlineRoutes = require("./routes/offline");
+const equipmentRoutes = require("./routes/equipment");
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/skills", skillsRoutes);
 app.use("/fishing", fishingRoutes);
 app.use("/chests", chestRoutes);
 app.use("/offline", offlineRoutes);
+app.use("/equipment", equipmentRoutes);
 
 const PORT = process.env.PORT || 3000;
 

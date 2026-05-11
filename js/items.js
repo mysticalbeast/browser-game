@@ -976,22 +976,80 @@ function getEquipmentSprite(type, name) {
   return `assets/equipment/${type}/${fileName}.gif`;
 }
 
-function equipItem(item, index, tabIndex) {
+async function requestBackendEquipItem(tabIndex, slotIndex) {
+  if (isLocalDevGame?.()) {
+    return {
+      localOnly: true
+    };
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("system", "Login required to equip items.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/equipment/equip`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        tabIndex,
+        slotIndex
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.("system", data?.message || "Equip item failed.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Equip item request failed:", error);
+    showFilterNotification?.("system", "Equip item request failed.");
+    return null;
+  }
+}
+
+async function equipItem(item, index, tabIndex) {
   hideItemTooltip();
-	
+
+  if (!isLocalDevGame?.()) {
+    const result = await requestBackendEquipItem(tabIndex, index);
+
+    if (!result) return;
+
+    state.equipment = result.equipment || state.equipment;
+    state.depot = result.depot || state.depot;
+
+    if (result.equippedItem) {
+      addLog(`🧩 Equipped ${result.equippedItem.rarityName} ${result.equippedItem.name}`, "system");
+    }
+
+    updateUI();
+    renderDepotPanel();
+    renderEquipmentSlots?.();
+    saveGame();
+
+    return;
+  }
+
   const slotType = item.type;
 
   if (!state.equipment[slotType] && state.equipment[slotType] !== null) return;
 
   const previous = state.equipment[slotType];
 
-  // equip new
   state.equipment[slotType] = item;
-
-  // remove from depot
   state.depot.tabs[tabIndex][index] = null;
 
-  // return old item to depot
   if (previous) {
     addItemToDepot(previous);
   }
