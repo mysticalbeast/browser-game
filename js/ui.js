@@ -4808,52 +4808,86 @@ function compactDepotTab(tabIndex) {
 
 async function sellCurrentDepotTab() {
   const activeTab = state.depot.activeTab || 0;
-  const items = state.depot.tabs[activeTab];
 
-  if (!items || !items.some(Boolean)) {
+  let processed = 0;
+  let guard = 0;
+
+  while (guard < 200) {
+    guard++;
+
+    const tab = state.depot.tabs[activeTab];
+
+    if (!tab || !tab.some(Boolean)) {
+      break;
+    }
+
+    const slotIndex = tab.findIndex(item => item);
+
+    if (slotIndex === -1) {
+      break;
+    }
+
+    await sellDepotItem(activeTab, slotIndex, true);
+    processed++;
+  }
+
+  hideItemTooltip();
+  renderDepotPanel();
+  updateUI();
+  injectPanelHero?.("depotPanel");
+  saveGame();
+
+  if (processed <= 0) {
     showFilterNotification("sell", "Depot tab is empty.");
     return;
   }
 
-  for (let i = items.length - 1; i >= 0; i--) {
-    if (items[i]) {
-      await sellDepotItem(activeTab, i, true);
-    }
-  }
-
-  compactDepotTab(activeTab);
-  hideItemTooltip();
-  renderDepotPanel();
-  updateUI();
-  injectPanelHero?.("depotPanel");
-  saveGame();
-
-  showFilterNotification("sell", `Sold all items in depot tab ${activeTab + 1}.`);
+  showFilterNotification(
+    "sell",
+    `Sold ${processed} item${processed === 1 ? "" : "s"} in depot tab ${activeTab + 1}.`
+  );
 }
 
-function salvageCurrentDepotTab() {
+async function salvageCurrentDepotTab() {
   const activeTab = state.depot.activeTab || 0;
-  const items = state.depot.tabs[activeTab];
 
-  if (!items || !items.some(Boolean)) {
+  let processed = 0;
+  let guard = 0;
+
+  while (guard < 200) {
+    guard++;
+
+    const tab = state.depot.tabs[activeTab];
+
+    if (!tab || !tab.some(Boolean)) {
+      break;
+    }
+
+    const slotIndex = tab.findIndex(item => item);
+
+    if (slotIndex === -1) {
+      break;
+    }
+
+    await salvageDepotItem(activeTab, slotIndex, true);
+    processed++;
+  }
+
+  hideItemTooltip();
+  renderDepotPanel();
+  injectPanelHero?.("depotPanel");
+  updateUI();
+  saveGame();
+
+  if (processed <= 0) {
     showFilterNotification("salvage", "Depot tab is empty.");
     return;
   }
 
-  for (let i = items.length - 1; i >= 0; i--) {
-    if (items[i]) {
-      salvageDepotItem(activeTab, i, true);
-    }
-  }
-
-  compactDepotTab(activeTab);
-  hideItemTooltip();
-  renderDepotPanel();
-  injectPanelHero?.("depotPanel");
-  updateUI();
-  saveGame();
-
-  showFilterNotification("salvage", `Salvaged all items in depot tab ${activeTab + 1}.`);
+  showFilterNotification(
+    "salvage",
+    `Salvaged ${processed} item${processed === 1 ? "" : "s"} in depot tab ${activeTab + 1}.`
+  );
 }
 
 function setDepotTab(tabIndex) {
