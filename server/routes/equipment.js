@@ -1,6 +1,21 @@
 const express = require("express");
 const authMiddleware = require("../middleware/auth");
 
+const MAX_ENHANCE_LEVEL = 10;
+
+const ENHANCE_CHANCES = [
+  100, // +0 → +1
+  90,  // +1 → +2
+  80,  // +2 → +3
+  70,  // +3 → +4
+  60,  // +4 → +5
+  50,  // +5 → +6
+  40,  // +6 → +7
+  30,  // +7 → +8
+  20,  // +8 → +9
+  10   // +9 → +10
+];
+
 const {
   loadPlayerSave,
   savePlayerSave
@@ -17,6 +32,19 @@ const VALID_EQUIPMENT_TYPES = [
   "ring",
   "shield"
 ];
+
+function getEnhanceCost(item) {
+  const level = Number(item.enhanceLevel || 0);
+  const tier = Number(item.tier || 1);
+
+  return {
+    gold: Math.floor(100000 * tier * Math.pow(1.85, level)),
+    materialKey: getSalvageMaterialKey(item.rarity),
+    materials: Math.ceil((level + 1) * tier * Math.pow(1.35, level)),
+    whetstones: Math.ceil(Math.pow(1.25, level)),
+    chance: ENHANCE_CHANCES[level] || 0
+  };
+}
 
 function ensureDepot(save) {
   if (!save.depot || typeof save.depot !== "object") {
@@ -272,6 +300,124 @@ router.post("/salvage", authMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Salvage item failed."
+    });
+  }
+});
+
+router.post("/enhance", authMiddleware, async (req, res) => {
+  try {
+    const slot = String(req.body?.slot || "");
+
+    if (!VALID_EQUIPMENT_TYPES.includes(slot)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid equipment slot."
+      });
+    }
+
+    const save = await loadPlayerSave(req.user.id);
+
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
+    }
+
+    ensureEquipment(save);
+
+    if (!save.materials || typeof save.materials !== "object") {
+      save.materials = {};
+    }
+
+    if (!save.salvageMaterials || typeof save.salvageMaterials !== "object") {
+      save.salvageMaterials = {
+        commonMaterial: 0,
+        uncommonMaterial: 0,
+        rareMaterial: 0,
+        legendaryMaterial: 0
+      };
+    }
+
+    const item = save.equipment[slot];
+
+    if (!isValidEquipmentItem(item)) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid item equipped in this slot."
+      });
+    }
+
+    const level = Number(item.enhanceLevel || 0);
+
+    if (level >= MAX_ENHANCE_LEVEL) {
+      return res.status(400).json({
+        success: false,
+        message: "Item is already fully enhanced."
+      });
+    }
+
+    const cost = getEnhanceCost(item);
+
+    const ownedGold = Number(save.gold || 0);
+    const ownedMaterial = Number(save.salvageMaterials[cost.materialKey] || 0);
+    const ownedWhetstones = Number(save.materials.whetstones || 0);
+
+    const missing = [];
+
+    if (ownedGold < cost.gold) missing.push("gold");
+    if (ownedMaterial < cost.materials) missing.push("materials");
+    if (ownedWhetstones < cost.whetstones) missing.push("whetstones");
+
+    if (missing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Not enough ${missing.join(", ")}.`
+      });
+    }
+
+    save.gold = Math.floor(ownedGold - cost.gold);
+
+    save.salvageMaterials[cost.materialKey] = Math.floor(
+      ownedMaterial - cost.materials
+    );
+
+    save.materials.whetstones = Math.floor(
+      ownedWhetstones - cost.whetstones
+    );
+
+    const roll = Math.random() * 100;
+    const success = roll <= cost.chance;
+
+    if (success) {
+      item.enhanceLevel = level + 1;
+    }
+
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
+
+    res.json({
+      success: true,
+      enhanced: success,
+      slot,
+      item,
+      cost,
+      roll,
+      equipment: save.equipment,
+      materials: save.materials,
+      salvageMaterials: save.salvageMaterials,
+      gold: save.gold,
+      message: success
+        ? `Enhanced ${item.name} to +${item.enhanceLevel}`
+        : `Enhancement failed. ${item.name} stayed +${level}`
+    });
+  } catch (error) {
+    console.error("Enhance item failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Enhance item failed."
     });
   }
 });

@@ -6194,7 +6194,74 @@ function selectEnhanceItem(slot) {
   renderBlacksmithPanel();
 }
 
-function enhanceEquippedItem(slot) {
+async function requestBackendEnhanceEquippedItem(slot) {
+  if (isLocalDevGame?.()) {
+    return {
+      localOnly: true
+    };
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("system", "Login required to enhance items.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/equipment/enhance`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ slot })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.("system", data?.message || "Enhance item failed.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Enhance item request failed:", error);
+    showFilterNotification?.("system", "Enhance item request failed.");
+    return null;
+  }
+}
+
+async function enhanceEquippedItem(slot) {
+  if (!isLocalDevGame?.()) {
+    const result = await requestBackendEnhanceEquippedItem(slot);
+
+    if (!result) return;
+
+    state.equipment = result.equipment || state.equipment;
+    state.materials = result.materials || state.materials;
+    state.salvageMaterials = result.salvageMaterials || state.salvageMaterials;
+
+    if (typeof result.gold === "number") {
+      state.gold = result.gold;
+    }
+
+    showFilterNotification(
+      result.enhanced ? "salvage" : "sell",
+      result.enhanced
+        ? `🛠 ${result.message}`
+        : `❌ ${result.message}`
+    );
+
+    renderBlacksmithPanel();
+    renderEquipmentSlots();
+    updateUI();
+    saveGame();
+
+    return;
+  }
+
   const item = state.equipment?.[slot];
   if (!item) return;
 
