@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const authMiddleware = require("../middleware/auth");
 
 const MAX_ENHANCE_LEVEL = 10;
@@ -105,10 +106,19 @@ function getItemSellValue(item) {
 function isValidEquipmentItem(item) {
   if (!item || typeof item !== "object") return false;
   if (!VALID_EQUIPMENT_TYPES.includes(item.type)) return false;
-  if (!item.id || typeof item.id !== "string") return false;
   if (!item.stats || typeof item.stats !== "object") return false;
 
   return true;
+}
+
+function ensureBackendItemId(item) {
+  if (!item || typeof item !== "object") return item;
+
+  if (!item.id || typeof item.id !== "string") {
+    item.id = crypto.randomUUID();
+  }
+
+  return item;
 }
 
 function getSalvageMaterialKey(rarityKey) {
@@ -187,6 +197,8 @@ router.post("/equip", authMiddleware, async (req, res) => {
         message: "Invalid equipment item."
       });
     }
+
+	ensureBackendItemId(item);
 
     const slotType = item.type;
     const previous = save.equipment[slotType] || null;
@@ -281,6 +293,8 @@ router.post("/salvage", authMiddleware, async (req, res) => {
       });
     }
 
+	ensureBackendItemId(item);
+
     const materialKey = getSalvageMaterialKey(item.rarity);
     const amount = getSalvageAmount(item);
 
@@ -356,6 +370,8 @@ router.post("/enhance", authMiddleware, async (req, res) => {
         message: "No valid item equipped in this slot."
       });
     }
+
+	ensureBackendItemId(item);
 
     const level = Number(item.enhanceLevel || 0);
 
@@ -471,6 +487,8 @@ router.post("/sell", authMiddleware, async (req, res) => {
         message: "Invalid equipment item."
       });
     }
+
+	ensureBackendItemId(item);
 
     const value = getItemSellValue(item);
 
