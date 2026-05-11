@@ -26,6 +26,7 @@ const router = express.Router();
 
 const VALID_EQUIPMENT_TYPES = [
   "armor",
+  "armour",
   "helmet",
   "legs",
   "shoes",
@@ -105,8 +106,18 @@ function getItemSellValue(item) {
 
 function isValidEquipmentItem(item) {
   if (!item || typeof item !== "object") return false;
-  if (!VALID_EQUIPMENT_TYPES.includes(item.type)) return false;
-  if (!item.stats || typeof item.stats !== "object") return false;
+
+  if (item.type === "armour") {
+    item.type = "armor";
+  }
+
+  if (!VALID_EQUIPMENT_TYPES.includes(item.type)) {
+    return false;
+  }
+
+  if (!item.stats || typeof item.stats !== "object") {
+    item.stats = {};
+  }
 
   return true;
 }
@@ -200,7 +211,7 @@ router.post("/equip", authMiddleware, async (req, res) => {
 
 	ensureBackendItemId(item);
 
-    const slotType = item.type;
+    const slotType = item.type === "armour" ? "armor" : item.type;
     const previous = save.equipment[slotType] || null;
 
     tab[slotIndex] = null;
