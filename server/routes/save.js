@@ -236,6 +236,26 @@ router.post("/:userId", authMiddleware, async (req, res) => {
     const finalSave = sanitizePersistentSave(validation.save);
 
     if (existingSave) {
+		
+	        // Backend-owned equipment
+      finalSave.equipment = existingSave.equipment || {};
+
+      // Backend-owned depot
+      finalSave.depot = existingSave.depot || {
+        tabs: []
+      };
+
+      // Backend-owned salvage materials
+      finalSave.salvageMaterials =
+        existingSave.salvageMaterials || {
+          commonMaterial: 0,
+          uncommonMaterial: 0,
+          rareMaterial: 0,
+          legendaryMaterial: 0
+        };
+
+      // Backend-owned materials
+      finalSave.materials = existingSave.materials || {};
       // Backend-owned skills
       finalSave.skills = existingSave.skills || {};
 
