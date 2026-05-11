@@ -6,289 +6,151 @@ const {
   savePlayerSave
 } = require("../dbSaves");
 
+const {
+  applyBackendExpGain
+} = require("../backendProgression");
+
 const router = express.Router();
 
-const MAX_LEVEL = 2000;
-const MAX_GOLD = 1_000_000_000_000;
-const MAX_STARS = 1_000_000_000_000;
-const MAX_SKILL_POINTS = 1000;
-const MAX_MATERIAL_AMOUNT = 10_000_000;
-const MAX_EQUIPMENT_ITEMS = 500;
-const MAX_LOG_MESSAGES = 150;
+const ZONE_REWARDS = {
+  1: { gold: [2, 5], exp: [4, 8], levelReq: 1 },
+  2: { gold: [6, 12], exp: [10, 18], levelReq: 5 },
+  3: { gold: [12, 22], exp: [18, 32], levelReq: 10 },
+  4: { gold: [25, 45], exp: [40, 70], levelReq: 18 },
+  5: { gold: [45, 80], exp: [75, 120], levelReq: 26 },
+  6: { gold: [75, 130], exp: [120, 190], levelReq: 36 },
+  7: { gold: [100, 170], exp: [165, 260], levelReq: 48 },
+  8: { gold: [135, 230], exp: [220, 340], levelReq: 60 },
+  9: { gold: [190, 320], exp: [310, 480], levelReq: 75 },
+  10: { gold: [270, 450], exp: [430, 680], levelReq: 90 },
+  11: { gold: [380, 620], exp: [600, 920], levelReq: 110 },
+  12: { gold: [520, 850], exp: [820, 1250], levelReq: 130 },
+  13: { gold: [690, 1120], exp: [1100, 1650], levelReq: 155 },
+  14: { gold: [900, 1450], exp: [1450, 2150], levelReq: 180 },
+  15: { gold: [1180, 1900], exp: [1850, 2800], levelReq: 210 },
+  16: { gold: [1550, 2500], exp: [2400, 3600], levelReq: 240 },
+  17: { gold: [2050, 3300], exp: [3100, 4600], levelReq: 275 },
+  18: { gold: [2700, 4300], exp: [4000, 6000], levelReq: 310 },
+  19: { gold: [3500, 5600], exp: [5200, 7800], levelReq: 350 },
+  20: { gold: [4500, 7200], exp: [6800, 10000], levelReq: 390 },
+  21: { gold: [5900, 9300], exp: [8600, 12800], levelReq: 435 },
+  22: { gold: [7600, 12000], exp: [11000, 16500], levelReq: 480 },
+  23: { gold: [9700, 15300], exp: [14000, 21000], levelReq: 530 },
+  24: { gold: [12500, 19500], exp: [18000, 27000], levelReq: 580 },
+  25: { gold: [16000, 25000], exp: [23000, 34500], levelReq: 635 },
+  26: { gold: [20500, 32000], exp: [29500, 44000], levelReq: 690 },
+  27: { gold: [26500, 41000], exp: [38000, 57000], levelReq: 750 },
+  28: { gold: [34000, 53000], exp: [49000, 73000], levelReq: 810 },
+  29: { gold: [44000, 68000], exp: [63000, 94000], levelReq: 875 },
+  30: { gold: [57000, 88000], exp: [82000, 123000], levelReq: 940 }
+};
 
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+function getFishingRewardZone(save) {
+  const currentZoneId = Number(save.zoneId || 1);
+  const currentZone = ZONE_REWARDS[currentZoneId];
+
+  if (currentZone) {
+    return currentZone;
+  }
+
+  return Object.values(ZONE_REWARDS)
+    .filter(zone => Number(save.level || 1) >= zone.levelReq)
+    .sort((a, b) => b.levelReq - a.levelReq)[0] || ZONE_REWARDS[1];
 }
 
-function clampNumber(value, min, max, fallback = 0) {
-  const number = Number(value);
+function getFishingGoldRewardPerFish(save) {
+  const level = Number(save?.fishing?.shopUpgrades?.goldenFish || 0);
+  if (level <= 0) return 0;
 
-  if (!Number.isFinite(number)) {
-    return fallback;
-  }
+  const zone = getFishingRewardZone(save);
+  const averageGold = (zone.gold[0] + zone.gold[1]) / 2;
 
-  return Math.max(min, Math.min(max, number));
+  return Math.floor(averageGold * (level * 0.01));
 }
 
-function sanitizeNumberMap(map, maxValue) {
-  if (!isPlainObject(map)) return {};
+function getFishingExpRewardPerFish(save) {
+  const level = Number(save?.fishing?.shopUpgrades?.powerfulFish || 0);
+  if (level <= 0) return 0;
 
-  const sanitized = {};
+  const zone = getFishingRewardZone(save);
+  const averageExp = (zone.exp[0] + zone.exp[1]) / 2;
 
-  Object.entries(map).forEach(([key, value]) => {
-    sanitized[key] = Math.floor(clampNumber(value, 0, maxValue, 0));
-  });
-
-  return sanitized;
+  return Math.floor(averageExp * (level * 0.01));
 }
 
-function getSpentSkillPoints(skills) {
-  if (!isPlainObject(skills)) return 0;
-
-  return Object.values(skills).reduce((sum, value) => {
-    return sum + Math.max(0, Math.floor(Number(value) || 0));
-  }, 0);
-}
-
-function sanitizePersistentSave(save) {
-  const cleaned = { ...save };
-
-  delete cleaned.monsters;
-  delete cleaned.projectiles;
-  delete cleaned.floatingTexts;
-  delete cleaned.damageNumbers;
-  delete cleaned.notifications;
-  delete cleaned.combatToken;
-  delete cleaned.spawnRequestInProgress;
-  delete cleaned.lastSpawnRequestAt;
-  delete cleaned.isAwayForOffline;
-  delete cleaned.offlineGainProcessing;
-
-  delete cleaned.activeMonster;
-  delete cleaned.currentMonster;
-  delete cleaned.pendingReward;
-  delete cleaned.pendingLoot;
-  delete cleaned.pendingCloudSave;
-
-  delete cleaned.skeletons;
-  delete cleaned.arrows;
-  delete cleaned.fireballs;
-  delete cleaned.effects;
-  delete cleaned.vfx;
-  delete cleaned.animations;
-
-  return cleaned;
-}
-
-function validateAndSanitizeSave(incomingSave) {
-  if (!isPlainObject(incomingSave)) {
-    return {
-      ok: false,
-      message: "Invalid save format."
-    };
-  }
-
-  const save = sanitizePersistentSave({
-    ...incomingSave,
-    monsters: []
-  });
-
-  save.level = Math.floor(clampNumber(save.level, 1, MAX_LEVEL, 1));
-  save.exp = Math.floor(clampNumber(save.exp, 0, Number.MAX_SAFE_INTEGER, 0));
-  save.gold = Math.floor(clampNumber(save.gold, 0, MAX_GOLD, 0));
-  save.stars = Math.floor(clampNumber(save.stars, 0, MAX_STARS, 0));
-  save.starsEarned = Math.floor(clampNumber(save.starsEarned, 0, MAX_STARS, 0));
-
-  save.skillPoints = Math.floor(
-    clampNumber(save.skillPoints, 0, MAX_SKILL_POINTS, 0)
-  );
-
-  const skills = isPlainObject(save.skills) ? save.skills : {};
-  save.skills = sanitizeNumberMap(skills, 1000);
-
-  const spentSkillPoints = getSpentSkillPoints(save.skills);
-  const maxTotalSkillPoints = 100000;
-
-  if (spentSkillPoints + save.skillPoints > maxTotalSkillPoints) {
-    return {
-      ok: false,
-      message: "Save rejected: impossible skill point total."
-    };
-  }
-
-  save.materials = sanitizeNumberMap(
-    save.materials,
-    MAX_MATERIAL_AMOUNT
-  );
-
-  save.salvageMaterials = sanitizeNumberMap(
-    save.salvageMaterials,
-    MAX_MATERIAL_AMOUNT
-  );
-
-  if (save.rebirth && isPlainObject(save.rebirth)) {
-    save.rebirth.count = Math.floor(
-      clampNumber(save.rebirth.count, 0, 1000, 0)
-    );
-
-    save.rebirth.coins = Math.floor(
-      clampNumber(save.rebirth.coins, 0, 100000, 0)
-    );
-  }
-
-  if (!Array.isArray(save.equipmentInventory)) {
-    save.equipmentInventory = [];
-  }
-
-  if (save.equipmentInventory.length > MAX_EQUIPMENT_ITEMS) {
-    return {
-      ok: false,
-      message: "Save rejected: too many equipment items."
-    };
-  }
-
-  if (save.logMessages && Array.isArray(save.logMessages)) {
-    save.logMessages = save.logMessages.slice(0, MAX_LOG_MESSAGES);
-  } else {
-    save.logMessages = [];
-  }
-
-  if (save.zoneId !== undefined) {
-    save.zoneId = Math.floor(
-      clampNumber(save.zoneId, 1, 99999, 1)
-    );
-  }
-
-  save.lastSeenAt = Math.floor(
-    clampNumber(save.lastSeenAt, 0, Date.now(), Date.now())
-  );
-
-  return {
-    ok: true,
-    save
-  };
-}
-
-router.get("/:userId", authMiddleware, async (req, res) => {
-  const { userId } = req.params;
-
-  if (String(req.user.id) !== String(userId)) {
-    return res.status(403).json({
-      success: false,
-      message: "You can only access your own save."
-    });
-  }
-
+router.post("/shop-reward", authMiddleware, async (req, res) => {
   try {
-    const dbSave = await loadPlayerSave(userId);
+    const fishCaught = Math.max(
+      0,
+      Math.min(1000, Math.floor(Number(req.body?.fishCaught || 0)))
+    );
 
-    res.json({
-      success: true,
-      save: dbSave
-        ? {
-            save: dbSave,
-            updatedAt: Number(dbSave.updatedAt || Date.now()),
-            source: "postgres"
-          }
-        : null
-    });
-  } catch (error) {
-    console.error("Failed to load save:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to load save."
-    });
-  }
-});
-
-router.post("/:userId", authMiddleware, async (req, res) => {
-  const { userId } = req.params;
-
-  if (String(req.user.id) !== String(userId)) {
-    return res.status(403).json({
-      success: false,
-      message: "You can only access your own save."
-    });
-  }
-
-  const { save } = req.body;
-
-  if (!save) {
-    return res.status(400).json({
-      success: false,
-      message: "Save data required."
-    });
-  }
-
-  try {
-    const existingSave = await loadPlayerSave(userId);
-    const persistentSave = sanitizePersistentSave(save);
-    const validation = validateAndSanitizeSave(persistentSave);
-
-    if (!validation.ok) {
-      return res.status(400).json({
-        success: false,
-        message: validation.message
+    if (fishCaught <= 0) {
+      return res.json({
+        success: true,
+        reward: {
+          gold: 0,
+          exp: 0
+        }
       });
     }
 
-    const finalSave = sanitizePersistentSave(validation.save);
+    const save = await loadPlayerSave(req.user.id);
 
-    if (existingSave) {
-      // Backend-owned skills
-      finalSave.skills = existingSave.skills || {};
-
-      finalSave.skillPoints = Math.floor(
-        Number(existingSave.skillPoints || 0)
-      );
-
-      finalSave.unlockedNodes = Array.isArray(existingSave.unlockedNodes)
-        ? existingSave.unlockedNodes
-        : ["minotaur_category"];
-
-      // Backend-owned rebirth
-      finalSave.rebirth = existingSave.rebirth || {
-        count: 0,
-        coins: 0
-      };
-
-      finalSave.rebirthUpgrades =
-        existingSave.rebirthUpgrades || {};
-
-      // Backend-owned stats
-      finalSave.stats = existingSave.stats || {};
-
-      // Backend-owned highest zone
-      finalSave.highestZone = Math.max(
-        Number(existingSave.highestZone || 1),
-        Number(finalSave.highestZone || 1)
-      );
-
-      // Backend-owned progression
-      finalSave.level = Math.floor(
-        Number(existingSave.level || 1)
-      );
-
-      finalSave.exp = Math.floor(
-        Number(existingSave.exp || 0)
-      );
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
     }
 
-    finalSave.lastSeenAt = Date.now();
+    if (!save.fishing || typeof save.fishing !== "object") {
+      save.fishing = {};
+    }
 
-    await savePlayerSave(userId, finalSave);
+    if (!save.fishing.shopUpgrades || typeof save.fishing.shopUpgrades !== "object") {
+      save.fishing.shopUpgrades = {};
+    }
+
+    const goldGain = getFishingGoldRewardPerFish(save) * fishCaught;
+    const expGain = getFishingExpRewardPerFish(save) * fishCaught;
+
+    save.gold = Math.floor(Number(save.gold || 0) + goldGain);
+
+    if (!save.stats || typeof save.stats !== "object") {
+      save.stats = {};
+    }
+
+    save.stats.goldEarned = Math.floor(
+      Number(save.stats.goldEarned || 0) + goldGain
+    );
+
+    save.stats.expEarned = Math.floor(
+      Number(save.stats.expEarned || 0) + expGain
+    );
+
+    applyBackendExpGain(save, expGain);
+
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
 
     res.json({
       success: true,
-      message: "Cloud save updated."
+      reward: {
+        gold: goldGain,
+        exp: expGain,
+        level: save.level,
+        currentExp: save.exp,
+        skillPoints: save.skillPoints
+      }
     });
   } catch (error) {
-    console.error("Failed to save cloud save:", error);
+    console.error("Fishing shop reward failed:", error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to save cloud save."
+      message: "Fishing shop reward failed."
     });
   }
 });

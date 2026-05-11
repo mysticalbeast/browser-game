@@ -304,29 +304,103 @@ function getFishingExpRewardPerFish() {
   return Math.floor(averageExp * (level * 0.01));
 }
 
-function applyFishingShopRewards(fishCaught) {
+async function requestBackendFishingShopReward(fishCaught) {
+  if (isLocalDevGame?.()) {
+    return {
+      success: true,
+      localOnly: true
+    };
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("system", "Login required for fishing rewards.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/fishing/shop-reward`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ fishCaught })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.("system", data?.message || "Fishing reward failed.");
+      return null;
+    }
+
+    return data.reward;
+  } catch (error) {
+    console.warn("Fishing reward request failed:", error);
+    showFilterNotification?.("system", "Fishing reward request failed.");
+    return null;
+  }
+}
+
+async function applyFishingShopRewards(fishCaught) {
   initializeFishing();
 
   const amount = Math.max(0, Math.floor(fishCaught));
   if (amount <= 0) return;
 
-  const goldGain = getFishingGoldRewardPerFish() * amount;
-  const expGain = getFishingExpRewardPerFish() * amount;
+  if (isLocalDevGame?.()) {
+    const goldGain = getFishingGoldRewardPerFish() * amount;
+    const expGain = getFishingExpRewardPerFish() * amount;
+
+    if (goldGain > 0) {
+      state.gold = (state.gold || 0) + goldGain;
+
+      if (!state.stats) state.stats = {};
+      state.stats.goldEarned = (state.stats.goldEarned || 0) + goldGain;
+    }
+
+    if (expGain > 0) {
+      state.exp = (state.exp || 0) + expGain;
+
+      if (!state.stats) state.stats = {};
+      state.stats.expEarned = (state.stats.expEarned || 0) + expGain;
+
+      checkLevelUp();
+    }
+
+    if (goldGain > 0 || expGain > 0) {
+      showFilterNotification(
+        "system",
+        `🎣 Fishing bonus: +${fmt(goldGain)} gold, +${fmt(expGain)} EXP.`
+      );
+    }
+
+    return;
+  }
+
+  const reward = await requestBackendFishingShopReward(amount);
+
+  if (!reward) return;
+
+  const goldGain = Number(reward.gold || 0);
+  const expGain = Number(reward.exp || 0);
 
   if (goldGain > 0) {
     state.gold = (state.gold || 0) + goldGain;
-
-    if (!state.stats) state.stats = {};
-    state.stats.goldEarned = (state.stats.goldEarned || 0) + goldGain;
   }
 
-  if (expGain > 0) {
-    state.exp = (state.exp || 0) + expGain;
+  if (typeof reward.level === "number") {
+    state.level = reward.level;
+  }
 
-    if (!state.stats) state.stats = {};
-    state.stats.expEarned = (state.stats.expEarned || 0) + expGain;
+  if (typeof reward.currentExp === "number") {
+    state.exp = reward.currentExp;
+  }
 
-    checkLevelUp();
+  if (typeof reward.skillPoints === "number") {
+    state.skillPoints = reward.skillPoints;
   }
 
   if (goldGain > 0 || expGain > 0) {
@@ -335,6 +409,9 @@ function applyFishingShopRewards(fishCaught) {
       `🎣 Fishing bonus: +${fmt(goldGain)} gold, +${fmt(expGain)} EXP.`
     );
   }
+
+  updateUI?.();
+  saveGame?.();
 }
 
 function buyFishingShopUpgrade(key, baseCost, maxLevel) {
