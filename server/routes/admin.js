@@ -1,6 +1,28 @@
 const express = require("express");
 const db = require("../database");
 
+const router = express.Router();
+
+function requireAdmin(req, res, next) {
+  const adminSecret = req.headers["x-admin-secret"];
+
+  if (!process.env.ADMIN_SECRET) {
+    return res.status(500).json({
+      success: false,
+      message: "ADMIN_SECRET is not configured."
+    });
+  }
+
+  if (adminSecret !== process.env.ADMIN_SECRET) {
+    return res.status(403).json({
+      success: false,
+      message: "Invalid admin secret."
+    });
+  }
+
+  next();
+}
+
 router.post("/user/:userId/rename", requireAdmin, async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
@@ -51,28 +73,6 @@ router.post("/user/:userId/rename", requireAdmin, async (req, res) => {
   }
 });
 
-const router = express.Router();
-
-function requireAdmin(req, res, next) {
-  const adminSecret = req.headers["x-admin-secret"];
-
-  if (!process.env.ADMIN_SECRET) {
-    return res.status(500).json({
-      success: false,
-      message: "ADMIN_SECRET is not configured."
-    });
-  }
-
-  if (adminSecret !== process.env.ADMIN_SECRET) {
-    return res.status(403).json({
-      success: false,
-      message: "Invalid admin secret."
-    });
-  }
-
-  next();
-}
-
 router.delete("/save/:username", requireAdmin, async (req, res) => {
   try {
     const username = String(req.params.username || "").trim();
@@ -119,5 +119,3 @@ router.delete("/save/:username", requireAdmin, async (req, res) => {
 });
 
 module.exports = router;
-
-//force redeploy
