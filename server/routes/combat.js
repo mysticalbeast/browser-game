@@ -707,7 +707,7 @@ router.post("/kill", authMiddleware, async (req, res) => {
       });
     }
 
-    const maxTokenAgeMs = 5 * 60 * 1000;
+    const maxTokenAgeMs = 30 * 60 * 1000;
 
     if (Date.now() - Number(session.createdAt || 0) > maxTokenAgeMs) {
       await deleteCombatSession(combatToken);
