@@ -15,6 +15,7 @@ const combatRoutes = require("./routes/combat");
 const rebirthRoutes = require("./routes/rebirth");
 const skillsRoutes = require("./routes/skills");
 const fishingRoutes = require("./routes/fishing");
+const chestRoutes = require("./routes/chests");
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use("/combat", combatRoutes);
 app.use("/rebirth", rebirthRoutes);
 app.use("/skills", skillsRoutes);
 app.use("/fishing", fishingRoutes);
+app.use("/chests", chestRoutes);
 
 const PORT = process.env.PORT || 3000;
 

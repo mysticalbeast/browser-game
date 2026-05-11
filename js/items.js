@@ -121,8 +121,99 @@ function renderBackpack() {
   `;
 }
 
-function openTreasureChest() {
+async function requestBackendOpenChest(type) {
+  if (isLocalDevGame?.()) {
+    return null;
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("system", "Login required to open chests.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/chests/open`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ type })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.("system", data?.message || "Chest opening failed.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Chest opening request failed:", error);
+    showFilterNotification?.("system", "Chest opening request failed.");
+    return null;
+  }
+}
+
+function applyBackendChestSavePayload(payload) {
+  if (!payload?.save) return;
+
+  if (typeof payload.save.gold === "number") {
+    state.gold = payload.save.gold;
+  }
+
+  if (typeof payload.save.exp === "number") {
+    state.exp = payload.save.exp;
+  }
+
+  if (typeof payload.save.level === "number") {
+    state.level = payload.save.level;
+  }
+
+  if (typeof payload.save.skillPoints === "number") {
+    state.skillPoints = payload.save.skillPoints;
+  }
+
+  if (payload.save.inventory && typeof payload.save.inventory === "object") {
+    state.inventory = payload.save.inventory;
+  }
+
+  if (payload.save.materials && typeof payload.save.materials === "object") {
+    state.materials = payload.save.materials;
+  }
+
+  if (payload.save.rewards && typeof payload.save.rewards === "object") {
+    state.rewards = payload.save.rewards;
+  }
+
+  if (payload.save.skins && typeof payload.save.skins === "object") {
+    state.skins = payload.save.skins;
+  }
+}
+
+async function openTreasureChest() {
   initializeInventory();
+
+  if (!isLocalDevGame?.()) {
+    const result = await requestBackendOpenChest("treasureChest");
+
+    if (!result) return;
+
+    applyBackendChestSavePayload(result);
+
+    showFilterNotification(
+      "system",
+      `📦 Treasure Chest opened: ${result.rewardsText.join(", ")}.`
+    );
+
+    renderBackpack?.();
+    updateUI?.();
+    saveGame?.();
+    return;
+  }
 
   if (getInventoryAmount("treasureChest") <= 0) {
     showFilterNotification("system", "📦 You do not have any Treasure Chests.");
@@ -231,8 +322,26 @@ function openTreasureChest() {
   saveGame();
 }
 
-function openGoldenTreasureChest() {
+async function openGoldenTreasureChest() {
   initializeInventory();
+
+  if (!isLocalDevGame?.()) {
+    const result = await requestBackendOpenChest("goldenTreasureChest");
+
+    if (!result) return;
+
+    applyBackendChestSavePayload(result);
+
+    showFilterNotification(
+      "system",
+      `✨ Golden Treasure Chest opened: ${result.rewardsText.join(", ")}.`
+    );
+
+    renderBackpack?.();
+    updateUI?.();
+    saveGame?.();
+    return;
+  }
 
   if (getInventoryAmount("goldenTreasureChest") <= 0) {
     showFilterNotification("system", "✨ You do not have any Golden Treasure Chests.");
@@ -334,11 +443,11 @@ function openGoldenTreasureChest() {
     addInventoryItem("goldenTreasureChest", 1);
     rewardsText.push("+1 bonus Golden Treasure Chest");
   }
-  
+
   if (Math.random() < 0.001) {
-  addInventoryItem("skinAscender", 1);
-  rewardsText.push("+1 Skin Ascender");
-}
+    addInventoryItem("skinAscender", 1);
+    rewardsText.push("+1 Skin Ascender");
+  }
 
   showFilterNotification(
     "system",
