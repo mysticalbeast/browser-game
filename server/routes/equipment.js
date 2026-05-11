@@ -74,6 +74,41 @@ function isValidEquipmentItem(item) {
   return true;
 }
 
+function getSalvageMaterialKey(rarityKey) {
+  if (rarityKey === "common") return "commonMaterial";
+  if (rarityKey === "uncommon") return "uncommonMaterial";
+  if (rarityKey === "rare") return "rareMaterial";
+  if (rarityKey === "legendary") return "legendaryMaterial";
+  return "commonMaterial";
+}
+
+function getRarityValueMultiplier(rarityKey) {
+  if (rarityKey === "common") return 1;
+  if (rarityKey === "uncommon") return 2.5;
+  if (rarityKey === "rare") return 6;
+  if (rarityKey === "legendary") return 20;
+  return 1;
+}
+
+function getSalvageAmount(item) {
+  if (!item) return 0;
+
+  const tier = Number(item.tier || 1);
+  const rarityMulti = getRarityValueMultiplier(item.rarity);
+
+  return Math.max(1, Math.floor(tier * rarityMulti));
+}
+
+function compactDepotTab(save, tabIndex) {
+  const tab = save.depot?.tabs?.[tabIndex];
+  if (!Array.isArray(tab)) return;
+
+  const compacted = tab.filter(item => item);
+  const emptySlots = Array(tab.length - compacted.length).fill(null);
+
+  save.depot.tabs[tabIndex] = [...compacted, ...emptySlots];
+}
+
 router.post("/equip", authMiddleware, async (req, res) => {
   try {
     const tabIndex = Math.floor(Number(req.body?.tabIndex));
@@ -155,6 +190,88 @@ router.post("/equip", authMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Equip item failed."
+    });
+  }
+});
+
+router.post("/salvage", authMiddleware, async (req, res) => {
+  try {
+    const tabIndex = Math.floor(Number(req.body?.tabIndex));
+    const slotIndex = Math.floor(Number(req.body?.slotIndex));
+
+    if (!Number.isInteger(tabIndex) || !Number.isInteger(slotIndex)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid depot slot."
+      });
+    }
+
+    const save = await loadPlayerSave(req.user.id);
+
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
+    }
+
+    ensureDepot(save);
+
+    if (!save.salvageMaterials || typeof save.salvageMaterials !== "object") {
+      save.salvageMaterials = {
+        commonMaterial: 0,
+        uncommonMaterial: 0,
+        rareMaterial: 0,
+        legendaryMaterial: 0
+      };
+    }
+
+    const tab = save.depot.tabs[tabIndex];
+
+    if (!tab || slotIndex < 0 || slotIndex >= tab.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid depot slot."
+      });
+    }
+
+    const item = tab[slotIndex];
+
+    if (!isValidEquipmentItem(item)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid equipment item."
+      });
+    }
+
+    const materialKey = getSalvageMaterialKey(item.rarity);
+    const amount = getSalvageAmount(item);
+
+    save.salvageMaterials[materialKey] = Math.floor(
+      Number(save.salvageMaterials[materialKey] || 0) + amount
+    );
+
+    tab[slotIndex] = null;
+    compactDepotTab(save, tabIndex);
+
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
+
+    res.json({
+      success: true,
+      item,
+      materialKey,
+      amount,
+      depot: save.depot,
+      salvageMaterials: save.salvageMaterials
+    });
+  } catch (error) {
+    console.error("Salvage item failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Salvage item failed."
     });
   }
 });

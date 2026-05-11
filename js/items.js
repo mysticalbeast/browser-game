@@ -1120,8 +1120,75 @@ function sellDepotItem(tabIndex, slotIndex, silent = false) {
   }
 }
 
-function salvageDepotItem(tabIndex, slotIndex, silent = false) {
+async function requestBackendSalvageDepotItem(tabIndex, slotIndex) {
+  if (isLocalDevGame?.()) {
+    return {
+      localOnly: true
+    };
+  }
+
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("system", "Login required to salvage items.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/equipment/salvage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        tabIndex,
+        slotIndex
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.("system", data?.message || "Salvage item failed.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Salvage item request failed:", error);
+    showFilterNotification?.("system", "Salvage item request failed.");
+    return null;
+  }
+}
+
+async function salvageDepotItem(tabIndex, slotIndex, silent = false) {
   if (!silent) hideItemTooltip();
+
+  if (!isLocalDevGame?.()) {
+    const result = await requestBackendSalvageDepotItem(tabIndex, slotIndex);
+
+    if (!result) return;
+
+    state.depot = result.depot || state.depot;
+    state.salvageMaterials = result.salvageMaterials || state.salvageMaterials;
+
+    if (!silent) {
+      showFilterNotification(
+        "salvage",
+        `⚒ Salvaged ${result.item.rarityName} ${result.item.name} (+${result.amount} material)`
+      );
+
+      updateUI();
+      renderDepotPanel();
+      renderCraftingPanel();
+      renderBlacksmithPanel();
+      injectPanelHero?.("depotPanel");
+      saveGame();
+    }
+
+    return;
+  }
 
   const item = state.depot.tabs[tabIndex]?.[slotIndex];
   if (!item) return;
@@ -1142,8 +1209,8 @@ function salvageDepotItem(tabIndex, slotIndex, silent = false) {
     updateUI();
     renderDepotPanel();
     renderCraftingPanel();
-	renderBlacksmithPanel();
-	injectPanelHero?.("depotPanel");
+    renderBlacksmithPanel();
+    injectPanelHero?.("depotPanel");
     saveGame();
   }
 }
