@@ -264,6 +264,15 @@ router.post("/:userId", authMiddleware, async (req, res) => {
         Number(existingSave.highestZone || 1),
         Number(finalSave.highestZone || 1)
       );
+
+      // Backend-owned progression
+      finalSave.level = Math.floor(
+        Number(existingSave.level || 1)
+      );
+
+      finalSave.exp = Math.floor(
+        Number(existingSave.exp || 0)
+      );
     }
 
     finalSave.lastSeenAt = Date.now();

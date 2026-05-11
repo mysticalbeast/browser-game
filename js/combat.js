@@ -1365,8 +1365,19 @@ const reward = await requestBackendKillReward(monster, {
   const goldGain = reward.gold || 0;
   const expGain = reward.exp || 0;
 
-  state.gold += goldGain;
-  state.exp += expGain;
+state.gold += goldGain;
+
+if (typeof reward.level === "number") {
+  state.level = reward.level;
+}
+
+if (typeof reward.currentExp === "number") {
+  state.exp = reward.currentExp;
+}
+
+if (typeof reward.skillPoints === "number") {
+  state.skillPoints = reward.skillPoints;
+}
 
   if (!state.stats) state.stats = {};
 
@@ -1388,8 +1399,6 @@ const reward = await requestBackendKillReward(monster, {
 
   const el = document.querySelector(`[data-monster-id="${monster.id}"]`);
   if (el) el.remove();
-
-  checkLevelUp();
 
   const researchPanel = document.getElementById("researchPanel");
 
