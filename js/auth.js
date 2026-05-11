@@ -117,7 +117,8 @@ async function loadCloudSaveAfterLogin(userId) {
     const data = await response.json();
 
     if (!data.success || !data.save?.save) {
-      return;
+      window.cloudSaveReady = true;
+	  return;
     }
 
     const cloudSave = data.save.save;
@@ -133,6 +134,8 @@ async function loadCloudSaveAfterLogin(userId) {
     if (typeof calculateOfflineGains === "function") {
       await calculateOfflineGains();
     }
+
+    window.cloudSaveReady = true;
 
     localStorage.setItem(getCurrentSaveKey(), JSON.stringify({
       ...state,

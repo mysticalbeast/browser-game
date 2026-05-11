@@ -45,6 +45,11 @@ window.isAwayForOffline = false;
 window.offlineGainProcessing = false;
 
 function saveGame() {
+	
+    if (!isLocalDevGame?.() && window.cloudSaveReady === false) {
+    return;
+  }
+	
   if (window.isResettingSave) return;
 
   if (!window.isAwayForOffline && !window.offlineGainProcessing) {

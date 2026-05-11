@@ -1,3 +1,5 @@
+window.cloudSaveReady = false;
+
 window.addEventListener("beforeunload", () => {
   state.lastSeenAt = Date.now();
   saveGame();
