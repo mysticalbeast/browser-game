@@ -128,6 +128,12 @@ async function loadCloudSaveAfterLogin(userId) {
       normalizeLoadedState();
     }
 
+    console.log("Cloud save loaded.");
+
+    if (typeof calculateOfflineGains === "function") {
+      await calculateOfflineGains();
+    }
+
     localStorage.setItem(getCurrentSaveKey(), JSON.stringify({
       ...state,
       monsters: [],
@@ -135,8 +141,6 @@ async function loadCloudSaveAfterLogin(userId) {
       spawnRequestInProgress: false,
       lastSpawnRequestAt: 0
     }));
-
-    console.log("Cloud save loaded.");
   } catch (error) {
     console.warn("Cloud save load failed:", error);
   }
