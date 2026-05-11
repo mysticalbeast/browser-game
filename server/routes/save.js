@@ -2,6 +2,10 @@ const express = require("express");
 const authMiddleware = require("../middleware/auth");
 
 const {
+  migrateEquipmentInventoryToDepot
+} = require("../backendDepot");
+
+const {
   loadPlayerSave,
   savePlayerSave
 } = require("../dbSaves");
@@ -223,6 +227,11 @@ router.post("/:userId", authMiddleware, async (req, res) => {
 
   try {
     const existingSave = await loadPlayerSave(userId);
+	
+	if (existingSave) {
+  migrateEquipmentInventoryToDepot(existingSave);
+}
+	
     const persistentSave = sanitizePersistentSave(save);
     const validation = validateAndSanitizeSave(persistentSave);
 

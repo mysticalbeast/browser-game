@@ -3,6 +3,10 @@ const crypto = require("crypto");
 const authMiddleware = require("../middleware/auth");
 
 const {
+  addItemToBackendDepot
+} = require("../backendDepot");
+
+const {
   applyBackendExpGain
 } = require("../backendProgression");
 
@@ -861,11 +865,13 @@ router.post("/kill", authMiddleware, async (req, res) => {
     }
 
     if (
-      Array.isArray(loot.equipmentItems) &&
-      loot.equipmentItems.length > 0
-    ) {
-      save.equipmentInventory.push(...loot.equipmentItems);
-    }
+  Array.isArray(loot.equipmentItems) &&
+  loot.equipmentItems.length > 0
+) {
+  loot.equipmentItems.forEach(item => {
+    addItemToBackendDepot(save, item);
+  });
+}
 
     save.lastSeenAt = Date.now();
 
