@@ -2054,21 +2054,10 @@ function toggleRewardOddsList() {
 }
 
 function updateRewardCoins() {
-  const now = Date.now();
+  if (!state.rewards) return;
 
   if (!state.rewards.lastCoinAt) {
-    state.rewards.lastCoinAt = now;
-    return;
-  }
-
-  const elapsed = now - state.rewards.lastCoinAt;
-  const coinsToAdd = Math.floor(elapsed / SLOT_COIN_INTERVAL_MS);
-
-  if (coinsToAdd > 0) {
-    state.rewards.slotCoins += coinsToAdd;
-    state.rewards.lastCoinAt += coinsToAdd * SLOT_COIN_INTERVAL_MS;
-    addLog(`⚪ You received ${coinsToAdd} Silver Token${coinsToAdd === 1 ? "" : "s"}.`);
-    saveGame();
+    state.rewards.lastCoinAt = Date.now();
   }
 }
 
