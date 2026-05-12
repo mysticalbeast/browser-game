@@ -12,7 +12,7 @@ const {
 
 const router = express.Router();
 
-const SLOT_COIN_INTERVAL_MS = 60 * 60 * 1000;
+const SLOT_COIN_INTERVAL_MS = 10 * 1000;
 
 const SLOT_REWARD_POOL = [
   { key: "goldSmall", type: "gold", amount: 500, weight: 100 },
