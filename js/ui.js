@@ -2113,9 +2113,7 @@ function startSlotRollAnimation(finalRewards) {
     let html = "";
 
     for (let i = 0; i < 18; i++) {
-      const randomReward =
-        rewardPool[rand(0, rewardPool.length - 1)];
-
+      const randomReward = rewardPool[rand(0, rewardPool.length - 1)];
       html += createCard(randomReward);
     }
 
@@ -2127,8 +2125,7 @@ function startSlotRollAnimation(finalRewards) {
     offset += 35;
 
     tracks.forEach(track => {
-      track.style.transform =
-        `translateY(-${offset}px)`;
+      track.style.transform = `translateY(-${offset}px)`;
     });
 
     if (offset > 1800) {
@@ -2140,8 +2137,7 @@ function startSlotRollAnimation(finalRewards) {
 
         void track.offsetHeight;
 
-        track.style.transition =
-          "transform 120ms linear";
+        track.style.transition = "transform 120ms linear";
       });
     }
   }, 70);
@@ -2151,16 +2147,16 @@ function startSlotRollAnimation(finalRewards) {
       const reward = finalRewards[index];
       const tier = getRewardTier(reward);
 
-      clearInterval(slotRollInterval);
+      if (index === tracks.length - 1 && slotRollInterval) {
+        clearInterval(slotRollInterval);
+        slotRollInterval = null;
+      }
 
-      track.style.transition =
-        "transform 700ms cubic-bezier(.17,.67,.25,1)";
+      track.style.transition = "transform 700ms cubic-bezier(.17,.67,.25,1)";
 
       track.innerHTML = `
         ${Array.from({ length: 8 }).map(() => {
-          const filler =
-            rewardPool[rand(0, rewardPool.length - 1)];
-
+          const filler = rewardPool[rand(0, rewardPool.length - 1)];
           return createCard(filler);
         }).join("")}
 
@@ -2170,9 +2166,7 @@ function startSlotRollAnimation(finalRewards) {
         })}
 
         ${Array.from({ length: 4 }).map(() => {
-          const filler =
-            rewardPool[rand(0, rewardPool.length - 1)];
-
+          const filler = rewardPool[rand(0, rewardPool.length - 1)];
           return createCard(filler);
         }).join("")}
       `;
@@ -2180,29 +2174,24 @@ function startSlotRollAnimation(finalRewards) {
       track.style.transform = "translateY(-1200px)";
 
       setTimeout(() => {
-        const reel =
-          track.closest(".slotReel");
-
+        const reel = track.closest(".slotReel");
         reel?.classList.add("slotWinnerGlow");
 
-if (index === tracks.length - 1) {
-  state.rewards.slotOptions =
-    hydrateSlotRewards(finalRewards);
+        if (index === tracks.length - 1) {
+          state.rewards.slotOptions = hydrateSlotRewards(finalRewards);
+          state.rewards.slotSpinning = false;
 
-  state.rewards.slotSpinning = false;
+          addLog("🎰 Rewards granted!");
 
-  addLog("🎰 Rewards granted!");
+          setTimeout(async () => {
+            while ((state.rewards.slotOptions || []).length > 0) {
+              await claimSlotReward(0);
+            }
 
-  setTimeout(async () => {
-while ((state.rewards.slotOptions || []).length > 0) {
-  await claimSlotReward(0);
-}
-
-    renderRewardsPanel();
-    updateMenuIndicators();
-    saveGame();
-  }, 700);
-}
+            renderRewardsPanel();
+            updateMenuIndicators();
+            saveGame();
+          }, 700);
         }
       }, 700);
     }, 1400 + index * 700);
