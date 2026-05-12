@@ -519,7 +519,10 @@ function bindEvents() {
       const depotPanel = document.getElementById("depotPanel");
       if (depotPanel) depotPanel.style.display = "none";
 
-      updateMenuIndicators();
+      if (typeof updateMenuIndicators === "function") {
+  updateMenuIndicators();
+}
+	  
       return;
     }
 
@@ -530,7 +533,11 @@ function bindEvents() {
     if (clickedInsidePanel) return;
 
     openPanel.style.display = "none";
-    updateMenuIndicators();
+    
+	if (typeof updateMenuIndicators === "function") {
+  updateMenuIndicators();
+}
+	
   });
 
   document.querySelectorAll("[data-log-filter]").forEach(button => {
@@ -714,7 +721,10 @@ function initGame() {
       renderFishingPanel?.(state.activeFishingTab || "rod");
     }
 
-    updateMenuIndicators();
+    if (typeof updateMenuIndicators === "function") {
+  updateMenuIndicators();
+}
+	
   }, 1000);
 
   setInterval(() => {
