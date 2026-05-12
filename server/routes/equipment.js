@@ -4,6 +4,10 @@ const authMiddleware = require("../middleware/auth");
 
 const MAX_ENHANCE_LEVEL = 10;
 
+const {
+  ensureDepot
+} = require("../backendDepot");
+
 const ENHANCE_CHANCES = [
   100, // +0 → +1
   90,  // +1 → +2

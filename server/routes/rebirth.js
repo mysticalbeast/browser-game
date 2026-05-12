@@ -2,6 +2,10 @@ const express = require("express");
 const authMiddleware = require("../middleware/auth");
 
 const {
+  createEmptyDepot
+} = require("../backendDepot");
+
+const {
   loadPlayerSave,
   savePlayerSave
 } = require("../dbSaves");
@@ -119,14 +123,7 @@ if (!shouldKeepGear) {
   save.equipment = { ...DEFAULT_EQUIPMENT };
   save.equipmentInventory = [];
 
-  save.depot = {
-    activeTab: 0,
-    tabs: [
-      Array(40).fill(null),
-      Array(40).fill(null),
-      Array(40).fill(null)
-    ]
-  };
+save.depot = createEmptyDepot();
 }
 
     save.rebirth.coins = Math.floor(Number(save.rebirth.coins || 0) + reward);
