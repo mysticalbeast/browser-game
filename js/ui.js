@@ -2579,7 +2579,7 @@ document.getElementById("damageText").innerHTML = `
   renderLeftSpellBox();
   renderAutomationBox();
   renderAutomationInfo();
-  updateMenuIndicators();
+  updateMenuIndicators?.();
   renderSpawnInfo();
   renderNecromancerVisual();
   
