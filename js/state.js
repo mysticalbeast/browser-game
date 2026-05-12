@@ -161,6 +161,26 @@ const MATERIAL_NAMES = {
   redEssence: "Red Essence"
 };
 
+function hydrateSlotReward(reward) {
+  if (!reward) return reward;
+
+  const visual = SLOT_REWARD_POOL.find(item => item.key === reward.key);
+
+  return {
+    ...visual,
+    ...reward,
+    icon: visual?.icon || reward.icon || "🎁",
+    name: visual?.name || reward.name || reward.key || "Reward",
+    desc: visual?.desc || reward.desc || "Claim this reward."
+  };
+}
+
+function hydrateSlotRewards(rewards) {
+  return Array.isArray(rewards)
+    ? rewards.map(hydrateSlotReward)
+    : [];
+}
+
 const SLOT_REWARD_POOL = [
   {
     key: "goldSmall",

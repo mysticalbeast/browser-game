@@ -2157,23 +2157,35 @@ async function spinSlotMachine() {
     const data = await response.json();
 
     if (!response.ok || !data?.success) {
-      showFilterNotification("system", data?.message || "Reward spin failed.");
+      showFilterNotification(
+        "system",
+        data?.message || "Reward spin failed."
+      );
       return;
     }
+
+    const hydratedRewards = hydrateSlotRewards(
+      data.rewards?.slotOptions || []
+    );
 
     state.rewards = {
       ...state.rewards,
       ...data.rewards,
+      slotOptions: hydratedRewards,
       slotSpinning: true
     };
 
     renderRewardsPanel();
     updateMenuIndicators();
 
-    startSlotRollAnimation(data.rewards.slotOptions);
+    startSlotRollAnimation(hydratedRewards);
   } catch (error) {
     console.warn("Reward spin request failed:", error);
-    showFilterNotification("system", "Reward spin request failed.");
+
+    showFilterNotification(
+      "system",
+      "Reward spin request failed."
+    );
   }
 }
 
@@ -2311,7 +2323,10 @@ async function claimSlotReward(index) {
   const token = getAuthToken?.();
 
   if (!token) {
-    showFilterNotification("system", "Login required to claim rewards.");
+    showFilterNotification(
+      "system",
+      "Login required to claim rewards."
+    );
     return;
   }
 
@@ -2328,17 +2343,28 @@ async function claimSlotReward(index) {
     const data = await response.json();
 
     if (!response.ok || !data?.success) {
-      showFilterNotification("system", data?.message || "Reward claim failed.");
+      showFilterNotification(
+        "system",
+        data?.message || "Reward claim failed."
+      );
       return;
     }
 
     Object.assign(state, data.save);
+	
+	state.rewards.slotOptions = hydrateSlotRewards(state.rewards.slotOptions);
 
     if (typeof normalizeLoadedState === "function") {
       normalizeLoadedState();
     }
 
-    const claimed = data.reward || reward;
+    state.rewards.slotOptions = hydrateSlotRewards(
+      state.rewards.slotOptions || []
+    );
+
+    const claimed = hydrateSlotReward(
+      data.reward || reward
+    );
 
     showFilterNotification(
       "system",
@@ -2354,7 +2380,11 @@ async function claimSlotReward(index) {
     saveGame?.();
   } catch (error) {
     console.warn("Reward claim request failed:", error);
-    showFilterNotification("system", "Reward claim request failed.");
+
+    showFilterNotification(
+      "system",
+      "Reward claim request failed."
+    );
   }
 }
 
