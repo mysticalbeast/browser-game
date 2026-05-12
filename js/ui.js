@@ -2205,7 +2205,11 @@ setTimeout(async () => {
   await claimAllSlotRewards();
 
   renderRewardsPanel();
+  
+  if (typeof updateMenuIndicators === "function") {
   updateMenuIndicators();
+}
+  
   saveGame();
 }, 700);
         }
@@ -2255,7 +2259,10 @@ async function spinSlotMachine() {
     };
 
     renderRewardsPanel();
-    updateMenuIndicators();
+    
+	if (typeof updateMenuIndicators === "function") {
+  updateMenuIndicators();
+}
 
     startSlotRollAnimation(hydratedRewards);
   } catch (error) {
@@ -2454,7 +2461,11 @@ async function claimSlotReward(index) {
     renderLeftSpellBox?.();
     renderAutomationBox?.();
     renderAutomationInfo?.();
-    updateMenuIndicators?.();
+    
+	if (typeof updateMenuIndicators === "function") {
+  updateMenuIndicators();
+}
+	
     updateUI?.();
     saveGame?.();
   } catch (error) {
@@ -2508,7 +2519,11 @@ async function claimAllSlotRewards() {
     );
 
     renderRewardsPanel();
-    updateMenuIndicators?.();
+    
+	if (typeof updateMenuIndicators === "function") {
+  updateMenuIndicators();
+}
+	
     updateUI?.();
     saveGame?.();
   } catch (error) {
@@ -2518,7 +2533,9 @@ async function claimAllSlotRewards() {
 }
 
 function updateSkillIndicator() {
-  updateMenuIndicators();
+  if (typeof updateMenuIndicators === "function") {
+    updateMenuIndicators();
+  }
 }
 
 function updateUI() {
@@ -2579,7 +2596,11 @@ document.getElementById("damageText").innerHTML = `
   renderLeftSpellBox();
   renderAutomationBox();
   renderAutomationInfo();
-  updateMenuIndicators?.();
+  
+  if (typeof updateMenuIndicators === "function") {
+  updateMenuIndicators();
+}
+  
   renderSpawnInfo();
   renderNecromancerVisual();
   
@@ -4385,7 +4406,9 @@ function togglePanel(id) {
     }
   }
 
+  if (typeof updateMenuIndicators === "function") {
   updateMenuIndicators();
+}
 }
 
 function renderResearchCard(monsterName) {
