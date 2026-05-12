@@ -2081,13 +2081,16 @@ function pickWeightedSlotReward() {
 
 function startSlotRollAnimation(finalRewards) {
   const tracks = document.querySelectorAll(".slotReelTrack");
-
   if (!tracks.length) return;
+
+  const rewards = hydrateSlotRewards(finalRewards || []);
 
   const rewardPool = SLOT_REWARD_POOL.map(reward => ({
     ...reward,
     tier: getRewardTier(reward)
   }));
+
+  const stopped = Array.from({ length: tracks.length }, () => false);
 
   if (slotRollInterval) {
     clearInterval(slotRollInterval);
@@ -2118,20 +2121,25 @@ function startSlotRollAnimation(finalRewards) {
     }
 
     track.innerHTML = html;
+    track.style.transition = "transform 120ms linear";
     track.style.transform = "translateY(0px)";
   });
 
   slotRollInterval = setInterval(() => {
     offset += 35;
 
-    tracks.forEach(track => {
+    tracks.forEach((track, index) => {
+      if (stopped[index]) return;
+
       track.style.transform = `translateY(-${offset}px)`;
     });
 
     if (offset > 1800) {
       offset = 0;
 
-      tracks.forEach(track => {
+      tracks.forEach((track, index) => {
+        if (stopped[index]) return;
+
         track.style.transition = "none";
         track.style.transform = "translateY(0px)";
 
@@ -2144,15 +2152,15 @@ function startSlotRollAnimation(finalRewards) {
 
   tracks.forEach((track, index) => {
     setTimeout(() => {
-      const reward = finalRewards[index];
+      const reward = rewards[index];
+      if (!reward) return;
+
+      stopped[index] = true;
+
       const tier = getRewardTier(reward);
 
-      if (index === tracks.length - 1 && slotRollInterval) {
-        clearInterval(slotRollInterval);
-        slotRollInterval = null;
-      }
-
-      track.style.transition = "transform 700ms cubic-bezier(.17,.67,.25,1)";
+      track.style.transition = "none";
+      track.style.transform = "translateY(0px)";
 
       track.innerHTML = `
         ${Array.from({ length: 8 }).map(() => {
@@ -2171,6 +2179,11 @@ function startSlotRollAnimation(finalRewards) {
         }).join("")}
       `;
 
+      void track.offsetHeight;
+
+      track.style.transition =
+        "transform 700ms cubic-bezier(.17,.67,.25,1)";
+
       track.style.transform = "translateY(-1200px)";
 
       setTimeout(() => {
@@ -2178,7 +2191,12 @@ function startSlotRollAnimation(finalRewards) {
         reel?.classList.add("slotWinnerGlow");
 
         if (index === tracks.length - 1) {
-          state.rewards.slotOptions = hydrateSlotRewards(finalRewards);
+          if (slotRollInterval) {
+            clearInterval(slotRollInterval);
+            slotRollInterval = null;
+          }
+
+          state.rewards.slotOptions = rewards;
           state.rewards.slotSpinning = false;
 
           addLog("🎰 Rewards granted!");
@@ -2193,7 +2211,7 @@ function startSlotRollAnimation(finalRewards) {
             saveGame();
           }, 700);
         }
-      }, 700);
+      }, 750);
     }, 1400 + index * 700);
   });
 }
