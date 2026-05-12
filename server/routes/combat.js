@@ -885,7 +885,8 @@ res.json({
     loot,
     level: save.level,
     currentExp: save.exp,
-    skillPoints: save.skillPoints
+    skillPoints: save.skillPoints,
+    depot: save.depot || null
   }
 });
   } catch (error) {

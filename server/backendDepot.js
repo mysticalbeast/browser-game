@@ -11,60 +11,9 @@ function createEmptyDepot() {
   };
 }
 
-function ensureDepot(save) {
-  if (!save.depot || typeof save.depot !== "object") {
-    save.depot = createEmptyDepot();
-  }
-
-  if (!Array.isArray(save.depot.tabs)) {
-    save.depot.tabs = [];
-  }
-
-  const normalizedTabs = [];
-
-  for (let t = 0; t < DEPOT_TAB_COUNT; t++) {
-    const sourceTab = Array.isArray(save.depot.tabs[t])
-      ? save.depot.tabs[t]
-      : [];
-
-    const tab = sourceTab.slice(0, DEPOT_TAB_SIZE);
-
-    while (tab.length < DEPOT_TAB_SIZE) {
-      tab.push(null);
-    }
-
-    normalizedTabs.push(tab);
-  }
-
-  const overflowItems = [];
-
-  for (let t = DEPOT_TAB_COUNT; t < save.depot.tabs.length; t++) {
-    if (Array.isArray(save.depot.tabs[t])) {
-      save.depot.tabs[t].forEach(item => {
-        if (item) overflowItems.push(item);
-      });
-    }
-  }
-
-  save.depot.tabs = normalizedTabs;
-
-  if (!Number.isInteger(save.depot.activeTab)) {
-    save.depot.activeTab = 0;
-  }
-
-  save.depot.activeTab = Math.max(
-    0,
-    Math.min(DEPOT_TAB_COUNT - 1, save.depot.activeTab)
-  );
-
-  if (overflowItems.length > 0) {
-    if (!Array.isArray(save.equipmentInventory)) {
-      save.equipmentInventory = [];
-    }
-
-    save.equipmentInventory.push(...overflowItems);
-  }
-}
+const {
+  ensureDepot
+} = require("../backendDepot");
 
 function addItemToBackendDepot(save, item) {
   if (!item || typeof item !== "object") return false;

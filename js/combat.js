@@ -1141,6 +1141,7 @@ function applyBackendLoot(loot, monster) {
       );
     } else {
       addLog(`🧪 ${materialNames[key] || key} dropped.`, "loot");
+
       showEssenceDropEffect(
         monster.x,
         monster.y,
@@ -1164,21 +1165,15 @@ function applyBackendLoot(loot, monster) {
   }
 
   if (Array.isArray(loot.equipmentItems) && loot.equipmentItems.length > 0) {
-  loot.equipmentItems.forEach(item => {
-    const inserted = addItemToDepot(item);
-
-    if (inserted) {
+    loot.equipmentItems.forEach(item => {
       addLog(`🧩 ${item.rarityName} ${item.name} dropped!`, "loot");
-    } else {
-      addLog("⚠️ Depot full. Item lost.", "system");
-    }
-  });
+    });
 
-  if (document.getElementById("depotPanel")?.style.display === "block") {
-    renderDepotPanel();
-    injectPanelHero?.("depotPanel");
+    if (document.getElementById("depotPanel")?.style.display === "block") {
+      renderDepotPanel();
+      injectPanelHero?.("depotPanel");
+    }
   }
-}
 
   renderBackpack?.();
   renderBlacksmithPanel?.();
@@ -1346,6 +1341,10 @@ if (typeof reward.skillPoints === "number") {
   );
 
   applyBackendLoot(reward.loot, monster);
+  
+  if (reward.depot && typeof reward.depot === "object") {
+  state.depot = reward.depot;
+}
 
   state.monsters = state.monsters.filter(m => m.id !== monster.id);
 
