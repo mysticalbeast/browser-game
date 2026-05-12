@@ -1507,7 +1507,7 @@ function getLevelCap() {
 function checkLevelUp() {
   const cap = getLevelCap();
 
-  while (state.exp >= expNeeded() && state.level < cap) {
+  while (state.exp >= expNeeded()) {
     state.exp -= expNeeded();
 
     const newLevel = state.level + 1;
@@ -1520,11 +1520,6 @@ function checkLevelUp() {
     }
 
     state.level = newLevel;
-  }
-
-  if (state.level >= cap) {
-    state.level = cap;
-    state.exp = 0;
   }
 }
 

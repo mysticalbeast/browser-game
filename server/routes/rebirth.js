@@ -79,16 +79,6 @@ router.post("/perform", authMiddleware, async (req, res) => {
 
     ensureRebirthData(save);
 
-    const cap = getLevelCap(save);
-    const level = Number(save.level || 1);
-
-    if (level < cap) {
-      return res.status(400).json({
-        success: false,
-        message: `You need to reach level ${cap} to rebirth.`
-      });
-    }
-
     const reward = calculateRebirthRewardForLevel(level);
 
     if (reward <= 0) {
@@ -123,10 +113,19 @@ router.post("/perform", authMiddleware, async (req, res) => {
       });
     }
 
-    if (!shouldKeepGear) {
-      save.equipment = { ...DEFAULT_EQUIPMENT };
-      save.equipmentInventory = [];
-    }
+if (!shouldKeepGear) {
+  save.equipment = { ...DEFAULT_EQUIPMENT };
+  save.equipmentInventory = [];
+
+  save.depot = {
+    activeTab: 0,
+    tabs: [
+      Array(40).fill(null),
+      Array(40).fill(null),
+      Array(40).fill(null)
+    ]
+  };
+}
 
     save.rebirth.coins = Math.floor(Number(save.rebirth.coins || 0) + reward);
     save.rebirth.count = Math.floor(Number(save.rebirth.count || 0) + 1);
