@@ -13,123 +13,75 @@ function getSkillSpendCost(skill) {
   return 1;
 }
 
-function performRebirth() {
-  const cap = getLevelCap();
+async function performRebirth() {
+  const minRebirthLevel = 50;
 
-  if (state.level < cap) {
+  if (state.level < minRebirthLevel) {
     showFilterNotification(
       "sell",
-      `🔒 You need to reach level ${cap} to rebirth.`
+      `🔒 You need to reach level ${minRebirthLevel} to rebirth.`
     );
     return;
   }
 
-  const reward = calculateRebirthReward();
+  if (performRebirth.inProgress) return;
+  performRebirth.inProgress = true;
 
-  if (reward <= 0) {
-    showFilterNotification(
-      "sell",
-      `🔒 You need to reach level ${cap} to rebirth.`
-    );
-    return;
-  }
+  try {
+    if (isLocalDevGame?.()) {
+      showFilterNotification("sell", "Local rebirth is disabled in this backend flow.");
+      return;
+    }
 
-  const shouldKeepGear = state.rebirthUpgrades?.keepGear > 0;
-  const rebirthTokenBonus = state.rebirthUpgrades?.rebirthTokens || 0;
+    const token = getAuthToken?.();
 
-  const keepMaterialPercent = Math.min(
-    50,
-    (state.rebirthUpgrades?.keepMaterials || 0) * 5
-  );
+    if (!token) {
+      showFilterNotification("sell", "Login required to rebirth.");
+      return;
+    }
 
-  const keptMaterials = {};
-  const keptSalvageMaterials = {};
-
-  if (keepMaterialPercent > 0) {
-    Object.entries(state.materials || {}).forEach(([key, value]) => {
-      keptMaterials[key] = Math.floor((value || 0) * keepMaterialPercent / 100);
+    const response = await fetch(`${API_URL}/rebirth/perform`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
     });
 
-    Object.entries(state.salvageMaterials || {}).forEach(([key, value]) => {
-      keptSalvageMaterials[key] = Math.floor((value || 0) * keepMaterialPercent / 100);
-    });
-  }
+    const data = await response.json();
 
-  if (!shouldKeepGear) {
-    state.equipment = { ...DEFAULT_EQUIPMENT };
-  }
+    if (!response.ok || !data?.success) {
+      showFilterNotification(
+        "sell",
+        data?.message || "Rebirth failed."
+      );
+      return;
+    }
 
-  state.rebirth.coins += reward;
-  state.rebirth.count++;
+    Object.assign(state, data.save);
 
-  // RESET CORE
-  state.level = 1;
-  state.exp = 0;
-  state.gold = 0;
+    if (typeof normalizeLoadedState === "function") {
+      normalizeLoadedState();
+    }
 
-  state.zoneId = 1;
-  state.visitedZones = [1];
-  clearMonsters();
-
-  state.skillPoints = 0;
-  state.skills = { ...DEFAULT_SKILLS };
-
-  state.ownedWeapons = ["Sword"];
-  state.equippedWeapon = "Sword";
-
-  state.monsters = [];
-
-  // RESET MATERIALS
-  state.materials = {
-    greenEssence: 0,
-    blueEssence: 0,
-    yellowEssence: 0,
-    redEssence: 0,
-    whetstones: 0
-  };
-
-  state.salvageMaterials = {
-    commonMaterial: 0,
-    uncommonMaterial: 0,
-    rareMaterial: 0,
-    legendaryMaterial: 0
-  };
-
-  // RESTORE KEPT MATERIALS
-  if (keepMaterialPercent > 0) {
-    state.materials = {
-      ...state.materials,
-      ...keptMaterials
-    };
-
-    state.salvageMaterials = {
-      ...state.salvageMaterials,
-      ...keptSalvageMaterials
-    };
+    clearMonsters?.();
 
     showFilterNotification(
       "salvage",
-      `📦 Kept ${keepMaterialPercent}% of materials.`
+      `🔁 Rebirth complete! Gained ${data.reward} coin${data.reward === 1 ? "" : "s"}.`
     );
+
+    updateUI();
+    renderEquipmentSlots?.();
+    renderBackpack?.();
+    renderDepotPanel?.();
+    saveGame();
+  } catch (error) {
+    console.warn("Rebirth request failed:", error);
+    showFilterNotification("sell", "Rebirth request failed.");
+  } finally {
+    performRebirth.inProgress = false;
   }
-
-  if (rebirthTokenBonus > 0) {
-    if (!state.rewards) state.rewards = {};
-    state.rewards.slotCoins = (state.rewards.slotCoins || 0) + rebirthTokenBonus;
-
-    showFilterNotification(
-      "sell",
-      `⚪ Rebirth bonus: +${rebirthTokenBonus} Silver Token${rebirthTokenBonus === 1 ? "" : "s"}`
-    );
-  }
-
-  showFilterNotification(
-    "salvage",
-    `🔁 Rebirth complete! Gained ${reward} coin${reward === 1 ? "" : "s"}.`
-  );
-
-  updateUI();
-  saveGame();
 }
 
 function triggerDeathEcho(targets, originalDamage) {
