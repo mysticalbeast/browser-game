@@ -4806,88 +4806,111 @@ function compactDepotTab(tabIndex) {
   state.depot.tabs[tabIndex] = [...compacted, ...emptySlots];
 }
 
+async function requestBackendBulkDepotAction(tabIndex, action) {
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification?.("system", "Login required for depot actions.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/equipment/bulk-depot-action`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        tabIndex,
+        action
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification?.("system", data?.message || "Depot action failed.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Bulk depot action request failed:", error);
+    showFilterNotification?.("system", "Depot action request failed.");
+    return null;
+  }
+}
+
 async function sellCurrentDepotTab() {
   const activeTab = state.depot.activeTab || 0;
 
-  let processed = 0;
-  let guard = 0;
+  if (sellCurrentDepotTab.inProgress) return;
+  sellCurrentDepotTab.inProgress = true;
 
-  while (guard < 200) {
-    guard++;
-
-    const tab = state.depot.tabs[activeTab];
-
-    if (!tab || !tab.some(Boolean)) {
-      break;
+  try {
+    if (isLocalDevGame?.()) {
+      showFilterNotification("sell", "Bulk sell is backend-only right now.");
+      return;
     }
 
-    const slotIndex = tab.findIndex(item => item);
+    const result = await requestBackendBulkDepotAction(activeTab, "sell");
 
-    if (slotIndex === -1) {
-      break;
-    }
+    if (!result) return;
 
-    await sellDepotItem(activeTab, slotIndex, true);
-    processed++;
+    state.depot = result.depot || state.depot;
+    state.gold = typeof result.gold === "number" ? result.gold : state.gold;
+    state.stats = result.stats || state.stats;
+
+    hideItemTooltip();
+    renderDepotPanel();
+    updateUI();
+    injectPanelHero?.("depotPanel");
+    saveGame();
+
+    showFilterNotification(
+      "sell",
+      `Sold ${result.processed} item${result.processed === 1 ? "" : "s"} for ${fmt(result.totalGold)} gold.`
+    );
+  } finally {
+    sellCurrentDepotTab.inProgress = false;
   }
-
-  hideItemTooltip();
-  renderDepotPanel();
-  updateUI();
-  injectPanelHero?.("depotPanel");
-  saveGame();
-
-  if (processed <= 0) {
-    showFilterNotification("sell", "Depot tab is empty.");
-    return;
-  }
-
-  showFilterNotification(
-    "sell",
-    `Sold ${processed} item${processed === 1 ? "" : "s"} in depot tab ${activeTab + 1}.`
-  );
 }
 
 async function salvageCurrentDepotTab() {
   const activeTab = state.depot.activeTab || 0;
 
-  let processed = 0;
-  let guard = 0;
+  if (salvageCurrentDepotTab.inProgress) return;
+  salvageCurrentDepotTab.inProgress = true;
 
-  while (guard < 200) {
-    guard++;
-
-    const tab = state.depot.tabs[activeTab];
-
-    if (!tab || !tab.some(Boolean)) {
-      break;
+  try {
+    if (isLocalDevGame?.()) {
+      showFilterNotification("salvage", "Bulk salvage is backend-only right now.");
+      return;
     }
 
-    const slotIndex = tab.findIndex(item => item);
+    const result = await requestBackendBulkDepotAction(activeTab, "salvage");
 
-    if (slotIndex === -1) {
-      break;
-    }
+    if (!result) return;
 
-    await salvageDepotItem(activeTab, slotIndex, true);
-    processed++;
+    state.depot = result.depot || state.depot;
+    state.salvageMaterials = result.salvageMaterials || state.salvageMaterials;
+
+    hideItemTooltip();
+    renderDepotPanel();
+    renderCraftingPanel?.();
+    renderBlacksmithPanel?.();
+    updateUI();
+    injectPanelHero?.("depotPanel");
+    saveGame();
+
+    showFilterNotification(
+      "salvage",
+      `Salvaged ${result.processed} item${result.processed === 1 ? "" : "s"}.`
+    );
+  } finally {
+    salvageCurrentDepotTab.inProgress = false;
   }
-
-  hideItemTooltip();
-  renderDepotPanel();
-  injectPanelHero?.("depotPanel");
-  updateUI();
-  saveGame();
-
-  if (processed <= 0) {
-    showFilterNotification("salvage", "Depot tab is empty.");
-    return;
-  }
-
-  showFilterNotification(
-    "salvage",
-    `Salvaged ${processed} item${processed === 1 ? "" : "s"} in depot tab ${activeTab + 1}.`
-  );
 }
 
 function setDepotTab(tabIndex) {

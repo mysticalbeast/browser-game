@@ -526,4 +526,146 @@ router.post("/sell", authMiddleware, async (req, res) => {
   }
 });
 
+router.post("/bulk-depot-action", authMiddleware, async (req, res) => {
+  try {
+    const tabIndex = Math.floor(Number(req.body?.tabIndex));
+    const action = String(req.body?.action || "");
+
+    if (!Number.isInteger(tabIndex)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid depot tab."
+      });
+    }
+
+    if (!["sell", "salvage"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid depot action."
+      });
+    }
+
+    const save = await loadPlayerSave(req.user.id);
+
+    if (!save) {
+      return res.status(400).json({
+        success: false,
+        message: "No cloud save found."
+      });
+    }
+
+    ensureDepot(save);
+
+    const tab = save.depot.tabs[tabIndex];
+
+    if (!tab || !Array.isArray(tab)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid depot tab."
+      });
+    }
+
+    if (!save.salvageMaterials || typeof save.salvageMaterials !== "object") {
+      save.salvageMaterials = {
+        commonMaterial: 0,
+        uncommonMaterial: 0,
+        rareMaterial: 0,
+        legendaryMaterial: 0
+      };
+    }
+
+    if (!save.stats || typeof save.stats !== "object") {
+      save.stats = {};
+    }
+
+    let processed = 0;
+    let totalGold = 0;
+
+    const gainedMaterials = {
+      commonMaterial: 0,
+      uncommonMaterial: 0,
+      rareMaterial: 0,
+      legendaryMaterial: 0
+    };
+
+    for (let i = 0; i < tab.length; i++) {
+      const item = tab[i];
+
+      if (!item) continue;
+      if (!isValidEquipmentItem(item)) continue;
+
+      ensureBackendItemId(item);
+
+      if (action === "sell") {
+        const value = getItemSellValue(item);
+
+        totalGold += value;
+        processed++;
+        tab[i] = null;
+      }
+
+      if (action === "salvage") {
+        const materialKey = getSalvageMaterialKey(item.rarity);
+        const amount = getSalvageAmount(item);
+
+        gainedMaterials[materialKey] =
+          Number(gainedMaterials[materialKey] || 0) + amount;
+
+        processed++;
+        tab[i] = null;
+      }
+    }
+
+    if (processed <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Depot tab is empty."
+      });
+    }
+
+    if (action === "sell") {
+      save.gold = Math.floor(Number(save.gold || 0) + totalGold);
+
+      save.stats.goldEarned = Math.floor(
+        Number(save.stats.goldEarned || 0) + totalGold
+      );
+    }
+
+    if (action === "salvage") {
+      Object.entries(gainedMaterials).forEach(([key, amount]) => {
+        if (!amount) return;
+
+        save.salvageMaterials[key] = Math.floor(
+          Number(save.salvageMaterials[key] || 0) + amount
+        );
+      });
+    }
+
+    compactDepotTab(save, tabIndex);
+
+    save.lastSeenAt = Date.now();
+
+    await savePlayerSave(req.user.id, save);
+
+    res.json({
+      success: true,
+      action,
+      processed,
+      totalGold,
+      gainedMaterials,
+      depot: save.depot,
+      gold: save.gold,
+      stats: save.stats,
+      salvageMaterials: save.salvageMaterials
+    });
+  } catch (error) {
+    console.error("Bulk depot action failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Bulk depot action failed."
+    });
+  }
+});
+
 module.exports = router;
