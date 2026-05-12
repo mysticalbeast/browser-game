@@ -11,10 +11,6 @@ function createEmptyDepot() {
   };
 }
 
-const {
-  ensureDepot
-} = require("../backendDepot");
-
 function addItemToBackendDepot(save, item) {
   if (!item || typeof item !== "object") return false;
 
