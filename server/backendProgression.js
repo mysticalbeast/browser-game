@@ -41,18 +41,11 @@ function applyBackendExpGain(save, expGain) {
 
   save.exp += Math.max(0, Math.floor(Number(expGain || 0)));
 
-  const cap = getBackendLevelCap(save);
-
-  while (save.level < cap && save.exp >= expNeededForLevel(save.level)) {
+while (save.exp >= expNeededForLevel(save.level)) {
     save.exp -= expNeededForLevel(save.level);
     save.level += 1;
 
     save.skillPoints += getSkillPointGainForLevel(save.level);
-  }
-
-  if (save.level >= cap) {
-    save.level = cap;
-    save.exp = 0;
   }
 }
 
