@@ -2201,15 +2201,21 @@ function startSlotRollAnimation(finalRewards) {
 
           addLog("🎰 Rewards granted!");
 
-          setTimeout(async () => {
-            while ((state.rewards.slotOptions || []).length > 0) {
-              await claimSlotReward(0);
-            }
+setTimeout(async () => {
+  const rewardCount = rewards.length;
 
-            renderRewardsPanel();
-            updateMenuIndicators();
-            saveGame();
-          }, 700);
+  for (let i = 0; i < rewardCount; i++) {
+    await claimSlotReward(0);
+
+    await new Promise(resolve =>
+      setTimeout(resolve, 150)
+    );
+  }
+
+  renderRewardsPanel();
+  updateMenuIndicators();
+  saveGame();
+}, 700);
         }
       }, 750);
     }, 1400 + index * 700);
