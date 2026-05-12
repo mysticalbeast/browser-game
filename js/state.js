@@ -198,126 +198,112 @@ const SLOT_REWARD_POOL = [
     amount: 1500,
     weight: 30
   },
+
   {
     key: "greenEssence",
     icon: "🟢",
-    name: "Green Essence Bundle",
-    desc: "Gain 10 Green Essence.",
+    name: "Green Essence Crate",
+    desc: "Gain 50 Green Essence.",
     type: "material",
     materialKey: "greenEssence",
-    amount: 10,
+    amount: 50,
     weight: 75
   },
   {
     key: "blueEssence",
     icon: "🔵",
-    name: "Blue Essence Bundle",
-    desc: "Gain 8 Blue Essence.",
+    name: "Blue Essence Crate",
+    desc: "Gain 35 Blue Essence.",
     type: "material",
     materialKey: "blueEssence",
-    amount: 8,
+    amount: 35,
     weight: 55
   },
   {
     key: "yellowEssence",
     icon: "🟡",
-    name: "Yellow Essence Bundle",
-    desc: "Gain 5 Yellow Essence.",
+    name: "Yellow Essence Crate",
+    desc: "Gain 20 Yellow Essence.",
     type: "material",
     materialKey: "yellowEssence",
-    amount: 5,
+    amount: 20,
     weight: 35
   },
   {
     key: "redEssence",
     icon: "🔴",
-    name: "Red Essence Bundle",
-    desc: "Gain 2 Red Essence.",
+    name: "Red Essence Crate",
+    desc: "Gain 10 Red Essence.",
     type: "material",
     materialKey: "redEssence",
-    amount: 2,
+    amount: 10,
     weight: 18
   },
   {
-    key: "wealthPotion",
-    icon: "🧪",
-    name: "Potion of Wealth",
-    desc: "Gain 5 minutes of Wealth potion time.",
-    type: "potion",
-    potionKey: "wealth",
-    durationMs: 5 * 60 * 1000,
-    weight: 35
+    key: "whetstones",
+    icon: "🪨",
+    name: "Whetstone Bundle",
+    desc: "Gain 5 Whetstones.",
+    type: "material",
+    materialKey: "whetstones",
+    amount: 5,
+    weight: 15
+  },
+
+  {
+    key: "fish",
+    icon: "🐟",
+    name: "Fish Crate",
+    desc: "Gain 250 Fish.",
+    type: "fish",
+    amount: 250,
+    weight: 45
   },
   {
-    key: "wisdomPotion",
-    icon: "🔮",
-    name: "Potion of Wisdom",
-    desc: "Gain 5 minutes of Wisdom potion time.",
-    type: "potion",
-    potionKey: "wisdom",
-    durationMs: 5 * 60 * 1000,
+    key: "stars",
+    icon: "⭐",
+    name: "Star Cluster",
+    desc: "Gain 150 Stars.",
+    type: "stars",
+    amount: 150,
     weight: 35
   },
+
   {
-    key: "swiftnessPotion",
-    icon: "💨",
-    name: "Potion of Swiftness",
-    desc: "Gain 5 minutes of Swiftness potion time.",
-    type: "potion",
-    potionKey: "swiftness",
-    durationMs: 5 * 60 * 1000,
+    key: "silverToken",
+    icon: "⚪",
+    name: "Silver Token",
+    desc: "Gain 1 extra Silver Token.",
+    type: "slotCoin",
+    amount: 1,
     weight: 22
   },
-  {
-    key: "potionBox",
-    icon: "🎁",
-    name: "Potion Box",
-    desc: "Gain 10 minutes of a random potion effect.",
-    type: "randomPotion",
-    durationMs: 10 * 60 * 1000,
-    weight: 20
-  },
-  {
-  key: "silverToken",
-  icon: "⚪",
-  name: "Silver Token",
-  desc: "Gain 1 extra Silver Token.",
-  type: "slotCoin",
-  amount: 1,
-  weight: 22
-},
+
   {
     key: "skillPoint",
     icon: "⚡",
     name: "Skill Point",
-    desc: "Gain 1 skill point.",
+    desc: "Gain 1 Skill Point.",
     type: "skillPoint",
     amount: 1,
     weight: 8
   },
+
   {
-  key: "skinShardSmall",
-  icon: "🎨",
-  name: "Small Skin Shard Pack",
-  desc: "Gain 5 Skin Shards used to unlock summon skins.",
-  type: "skinShard",
-  amount: 5,
-  weight: 30
-},
-{
-  key: "skinShardBig",
-  icon: "🧩",
-  name: "Large Skin Shard Pack",
-  desc: "Gain 15 Skin Shards used to unlock summon skins.",
-  type: "skinShard",
-  amount: 15,
-  weight: 10
-},
+    key: "skinShardSmall",
+    icon: "🎨",
+    name: "Skin Shard Pack",
+    desc: "Gain 25 Skin Shards.",
+    type: "skinShard",
+    amount: 25,
+    weight: 18
+  },
+
   {
     key: "jackpotChest",
     icon: "💎",
     name: "Jackpot Chest",
-    desc: "Gain a rare mixed reward.",
+    desc: "Massive mixed reward.",
     type: "jackpot",
     weight: 4
   }
