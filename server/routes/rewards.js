@@ -124,6 +124,92 @@ function addExp(save, amount) {
   return gained;
 }
 
+function applyReward(save, reward) {
+  ensureRewardContainers(save);
+
+  const level = Math.max(1, Number(save.level || 1));
+
+  if (reward.type === "gold") {
+    addGold(save, reward.amount * level);
+  }
+
+  if (reward.type === "exp") {
+    addExp(save, reward.amount * level);
+  }
+
+  if (reward.type === "material") {
+    save.materials[reward.materialKey] = Math.floor(
+      Number(save.materials[reward.materialKey] || 0) +
+      Number(reward.amount || 0)
+    );
+  }
+
+  if (reward.type === "fish") {
+    save.fishing.fish = Math.floor(
+      Number(save.fishing.fish || 0) +
+      Number(reward.amount || 0)
+    );
+
+    save.fishing.caughtFish = Math.floor(
+      Number(save.fishing.caughtFish || 0) +
+      Number(reward.amount || 0)
+    );
+  }
+
+  if (reward.type === "stars") {
+    save.stars = Math.floor(
+      Number(save.stars || 0) +
+      Number(reward.amount || 0)
+    );
+
+    save.starsEarned = Math.floor(
+      Number(save.starsEarned || 0) +
+      Number(reward.amount || 0)
+    );
+  }
+
+  if (reward.type === "slotCoin") {
+    save.rewards.slotCoins = Math.floor(
+      Number(save.rewards.slotCoins || 0) +
+      Number(reward.amount || 0)
+    );
+  }
+
+  if (reward.type === "skillPoint") {
+    save.skillPoints = Math.floor(
+      Number(save.skillPoints || 0) +
+      Number(reward.amount || 0)
+    );
+  }
+
+  if (reward.type === "skinShard") {
+    save.skins.shards = Math.floor(
+      Number(save.skins.shards || 0) +
+      Number(reward.amount || 0)
+    );
+  }
+
+  if (reward.type === "jackpot") {
+    const goldAmount = Math.floor(10000 * level);
+    const expAmount = Math.floor(5000 * level);
+
+    addGold(save, goldAmount);
+    addExp(save, expAmount);
+
+    save.skillPoints = Math.floor(
+      Number(save.skillPoints || 0) + 2
+    );
+
+    save.materials.redEssence = Math.floor(
+      Number(save.materials.redEssence || 0) + 10
+    );
+
+    save.skins.shards = Math.floor(
+      Number(save.skins.shards || 0) + 100
+    );
+  }
+}
+
 router.post("/spin", authMiddleware, async (req, res) => {
   try {
     const save = await loadPlayerSave(req.user.id);
@@ -178,9 +264,8 @@ router.post("/spin", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/claim", authMiddleware, async (req, res) => {
+router.post("/claim-all", authMiddleware, async (req, res) => {
   try {
-    const index = Math.floor(Number(req.body?.index));
     const save = await loadPlayerSave(req.user.id);
 
     if (!save) {
@@ -193,124 +278,39 @@ router.post("/claim", authMiddleware, async (req, res) => {
     ensureRewards(save);
     ensureRewardContainers(save);
 
-    if (
-      !Number.isInteger(index) ||
-      index < 0 ||
-      index >= save.rewards.slotOptions.length
-    ) {
+    const rewards = Array.isArray(save.rewards.slotOptions)
+      ? [...save.rewards.slotOptions]
+      : [];
+
+    if (rewards.length <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Invalid reward."
+        message: "No rewards to claim."
       });
     }
 
-    const reward = save.rewards.slotOptions[index];
+    rewards.forEach(reward => {
+      if (reward && typeof reward === "object") {
+        applyReward(save, reward);
+      }
+    });
 
-    if (!reward) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid reward."
-      });
-    }
-
-    const level = Math.max(1, Number(save.level || 1));
-
-    if (reward.type === "gold") {
-      addGold(save, reward.amount * level);
-    }
-
-    if (reward.type === "exp") {
-      addExp(save, reward.amount * level);
-    }
-
-    if (reward.type === "material") {
-      save.materials[reward.materialKey] = Math.floor(
-        Number(save.materials[reward.materialKey] || 0) +
-        Number(reward.amount || 0)
-      );
-    }
-
-    if (reward.type === "fish") {
-      save.fishing.fish = Math.floor(
-        Number(save.fishing.fish || 0) +
-        Number(reward.amount || 0)
-      );
-
-      save.fishing.caughtFish = Math.floor(
-        Number(save.fishing.caughtFish || 0) +
-        Number(reward.amount || 0)
-      );
-    }
-
-    if (reward.type === "stars") {
-      save.stars = Math.floor(
-        Number(save.stars || 0) +
-        Number(reward.amount || 0)
-      );
-
-      save.starsEarned = Math.floor(
-        Number(save.starsEarned || 0) +
-        Number(reward.amount || 0)
-      );
-    }
-
-    if (reward.type === "slotCoin") {
-      save.rewards.slotCoins = Math.floor(
-        Number(save.rewards.slotCoins || 0) +
-        Number(reward.amount || 0)
-      );
-    }
-
-    if (reward.type === "skillPoint") {
-      save.skillPoints = Math.floor(
-        Number(save.skillPoints || 0) +
-        Number(reward.amount || 0)
-      );
-    }
-
-    if (reward.type === "skinShard") {
-      save.skins.shards = Math.floor(
-        Number(save.skins.shards || 0) +
-        Number(reward.amount || 0)
-      );
-    }
-
-    if (reward.type === "jackpot") {
-      const goldAmount = Math.floor(10000 * level);
-      const expAmount = Math.floor(5000 * level);
-
-      addGold(save, goldAmount);
-      addExp(save, expAmount);
-
-      save.skillPoints = Math.floor(
-        Number(save.skillPoints || 0) + 2
-      );
-
-      save.materials.redEssence = Math.floor(
-        Number(save.materials.redEssence || 0) + 10
-      );
-
-      save.skins.shards = Math.floor(
-        Number(save.skins.shards || 0) + 100
-      );
-    }
-
-    save.rewards.slotOptions.splice(index, 1);
+    save.rewards.slotOptions = [];
     save.lastSeenAt = Date.now();
 
     await savePlayerSave(req.user.id, save);
 
     res.json({
       success: true,
-      reward,
+      rewardsClaimed: rewards,
       save
     });
   } catch (error) {
-    console.error("Reward claim failed:", error);
+    console.error("Reward claim all failed:", error);
 
     res.status(500).json({
       success: false,
-      message: "Reward claim failed."
+      message: "Reward claim all failed."
     });
   }
 });
