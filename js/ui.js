@@ -2146,33 +2146,46 @@ function startSlotRollAnimation(finalRewards) {
   });
 }
 
-function spinSlotMachine() {
+async function spinSlotMachine() {
   if (state.rewards.slotSpinning) return;
 
-  if (state.rewards.slotCoins <= 0) {
-    addLog("⚪ You need a Silver Token to spin.");
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification("system", "Login required to spin rewards.");
     return;
   }
 
-  if (state.rewards.slotOptions.length > 0) {
-    addLog("🎰 Pick one of your current slot rewards first.");
-    return;
+  try {
+    const response = await fetch(`${API_URL}/rewards/spin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification("system", data?.message || "Reward spin failed.");
+      return;
+    }
+
+    state.rewards = {
+      ...state.rewards,
+      ...data.rewards,
+      slotSpinning: true
+    };
+
+    renderRewardsPanel();
+    updateMenuIndicators();
+
+    startSlotRollAnimation(data.rewards.slotOptions);
+  } catch (error) {
+    console.warn("Reward spin request failed:", error);
+    showFilterNotification("system", "Reward spin request failed.");
   }
-
-  const finalRewards = [
-    pickWeightedSlotReward(),
-    pickWeightedSlotReward(),
-    pickWeightedSlotReward()
-  ];
-
-  state.rewards.slotCoins--;
-  state.rewards.slotSpinning = true;
-  state.rewards.slotOptions = [];
-
-  renderRewardsPanel();
-  updateMenuIndicators();
-
-  startSlotRollAnimation(finalRewards);
 }
 
 function addPotionTimeFromReward(potionKey, durationMs) {
@@ -2302,114 +2315,58 @@ function renderAutomationInfo() {
   `;
 }
 
-function claimSlotReward(index) {
+async function claimSlotReward(index) {
   const reward = state.rewards.slotOptions[index];
   if (!reward) return;
 
-  if (reward.type === "gold") {
-    const amount = Math.floor(reward.amount * Math.max(1, state.level));
-    state.gold += amount;
+  const token = getAuthToken?.();
 
-    if (!state.stats) state.stats = {};
-    state.stats.goldEarned = (state.stats.goldEarned || 0) + amount;
-
-    showFilterNotification("system", `🎁 ${reward.name}: +${fmt(amount)} gold.`);
+  if (!token) {
+    showFilterNotification("system", "Login required to claim rewards.");
+    return;
   }
 
-  if (reward.type === "exp") {
-    const amount = Math.floor(reward.amount * Math.max(1, state.level));
-    state.exp += amount;
+  try {
+    const response = await fetch(`${API_URL}/rewards/claim`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ index })
+    });
 
-    if (!state.stats) state.stats = {};
-    state.stats.expEarned = (state.stats.expEarned || 0) + amount;
+    const data = await response.json();
 
-    showFilterNotification("system", `🎁 ${reward.name}: +${fmt(amount)} EXP.`);
-    checkLevelUp();
-  }
-
-  if (reward.type === "material") {
-    state.materials[reward.materialKey] += reward.amount;
-    showFilterNotification(
-      "system",
-      `🎁 ${reward.name}: +${reward.amount} ${MATERIAL_NAMES[reward.materialKey]}.`
-    );
-  }
-
-  if (reward.type === "potion") {
-    const added = addPotionTimeFromReward(reward.potionKey, reward.durationMs);
-
-    if (added) {
-      showFilterNotification(
-        "system",
-        `🎁 ${reward.name}: +${formatCooldown(reward.durationMs)} potion time.`
-      );
-    } else {
-      state.rewards.slotCoins++;
-      showFilterNotification("system", `🎁 ${reward.name} is capped. Refunded 1 Silver Token.`);
+    if (!response.ok || !data?.success) {
+      showFilterNotification("system", data?.message || "Reward claim failed.");
+      return;
     }
-  }
 
-  if (reward.type === "randomPotion") {
-    const randomPotion = POTIONS[rand(0, POTIONS.length - 1)];
-    const added = addPotionTimeFromReward(randomPotion.key, reward.durationMs);
+    Object.assign(state, data.save);
 
-    if (added) {
-      showFilterNotification(
-        "system",
-        `🎁 ${reward.name}: +${formatCooldown(reward.durationMs)} ${randomPotion.name}.`
-      );
-    } else {
-      state.rewards.slotCoins++;
-      showFilterNotification("system", "🎁 Potion timers are capped. Refunded 1 Silver Token.");
+    if (typeof normalizeLoadedState === "function") {
+      normalizeLoadedState();
     }
-  }
 
-  if (reward.type === "slotCoin") {
-    state.rewards.slotCoins += reward.amount;
-    showFilterNotification("system", `🎁 ${reward.name}: +${reward.amount} Silver Token.`);
-  }
-
-  if (reward.type === "skillPoint") {
-    state.skillPoints += reward.amount;
-    showFilterNotification("system", `🎁 ${reward.name}: +${reward.amount} skill point.`);
-  }
-
-  if (reward.type === "skinShard") {
-    addSkinShards?.(reward.amount);
-  }
-
-  if (reward.type === "jackpot") {
-    const goldAmount = Math.floor(5000 * Math.max(1, state.level));
-    const expAmount = Math.floor(2500 * Math.max(1, state.level));
-
-    state.gold += goldAmount;
-    state.exp += expAmount;
-    state.skillPoints += 1;
-    state.materials.redEssence += 3;
-
-    if (!state.stats) state.stats = {};
-    state.stats.goldEarned = (state.stats.goldEarned || 0) + goldAmount;
-    state.stats.expEarned = (state.stats.expEarned || 0) + expAmount;
-
-    addSkinShards?.(25);
+    const claimed = data.reward || reward;
 
     showFilterNotification(
       "system",
-      `💎 Jackpot! +${fmt(goldAmount)} gold, +${fmt(expAmount)} EXP, +1 skill point, +3 Red Essence, +25 Skin Shards.`
+      `🎁 Claimed ${claimed.name || claimed.key || "reward"}.`
     );
 
-    checkLevelUp();
+    renderRewardsPanel();
+    renderLeftSpellBox?.();
+    renderAutomationBox?.();
+    renderAutomationInfo?.();
+    updateMenuIndicators?.();
+    updateUI?.();
+    saveGame?.();
+  } catch (error) {
+    console.warn("Reward claim request failed:", error);
+    showFilterNotification("system", "Reward claim request failed.");
   }
-
-  state.rewards.slotOptions = [];
-
-  renderRewardsPanel();
-  renderLeftSpellBox();
-  renderAutomationBox();
-  renderAutomationInfo();
-  updateMenuIndicators();
-  updateUI();
-  saveGame();
 }
 
 function updateMenuIndicators() {
