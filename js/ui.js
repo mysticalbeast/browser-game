@@ -2388,6 +2388,16 @@ async function claimSlotReward(index) {
   }
 }
 
+async function claimAllSlotRewards() {
+  const rewards = [...(state.rewards.slotOptions || [])];
+
+  if (rewards.length <= 0) return;
+
+  for (let i = 0; i < rewards.length; i++) {
+    await claimSlotReward(i);
+  }
+}
+
 function updateMenuIndicators() {
   const skillsBtn = document.getElementById("skillsBtn");
   const weaponsBtn = document.getElementById("weaponsBtn");
@@ -2909,45 +2919,86 @@ function renderRewardsPanel() {
         </button>
       </div>
 
-      ${
-        options.length > 0
-          ? `<div style="margin-top:10px;">
-              <div style="color:#ffcf4a;font-weight:bold;margin-bottom:6px;">Pick one reward:</div>
-              ${options.map((reward, index) => {
-                const tier = getRewardTier(reward);
+${
+  options.length > 0
+    ? `<div style="margin-top:10px;">
+        <div style="
+          color:#35d66b;
+          font-weight:bold;
+          margin-bottom:6px;
+        ">
+          🎁 Rewards:
+        </div>
 
-                return `
-                  <button class="upgradeBtn" style="
-                    display:flex;
-                    align-items:center;
-                    gap:8px;
-                    padding:7px;
-                    margin-top:6px;
-                    border-color:${tier.color};
-                    box-shadow:0 0 8px ${tier.glow};
-                  " onclick="claimSlotReward(${index})">
-                    <span style="
-                      font-size:24px;
-                      width:32px;
-                      text-align:center;
-                      filter:drop-shadow(0 0 5px ${tier.color});
-                    ">${reward.icon}</span>
+        ${options.map((reward, index) => {
+          const tier = getRewardTier(reward);
 
-                    <span style="flex:1;">
-                      <span style="color:${tier.color};font-weight:bold;">${reward.name}</span>
-                      <span style="
-                        font-size:9px;
-                        color:${tier.color};
-                        margin-left:4px;
-                        text-transform:uppercase;
-                      ">${tier.name}</span><br>
-                      <small>${reward.desc}</small>
-                    </span>
-                  </button>
-                `;
-              }).join("")}
-            </div>`
-          : ""
+          return `
+            <div style="
+              display:flex;
+              align-items:center;
+              gap:8px;
+              padding:7px;
+              margin-top:6px;
+              border:1px solid ${tier.color};
+              border-radius:8px;
+              background:linear-gradient(
+                90deg,
+                rgba(255,255,255,.04),
+                rgba(0,0,0,.2)
+              );
+              box-shadow:0 0 8px ${tier.glow};
+            ">
+              <span style="
+                font-size:24px;
+                width:32px;
+                text-align:center;
+                filter:drop-shadow(0 0 5px ${tier.color});
+              ">
+                ${reward.icon}
+              </span>
+
+              <span style="flex:1;">
+                <span style="
+                  color:${tier.color};
+                  font-weight:bold;
+                ">
+                  ${reward.name}
+                </span>
+
+                <span style="
+                  font-size:9px;
+                  color:${tier.color};
+                  margin-left:4px;
+                  text-transform:uppercase;
+                ">
+                  ${tier.name}
+                </span>
+
+                <br>
+
+                <small>${reward.desc}</small>
+              </span>
+            </div>
+          `;
+        }).join("")}
+
+        <button
+          class="upgradeBtn"
+          style="
+            margin-top:10px;
+            text-align:center;
+            font-size:13px;
+            border-color:#35d66b;
+            box-shadow:0 0 10px rgba(53,214,107,.4);
+          "
+          onclick="claimAllSlotRewards()"
+        >
+          🎁 Claim All Rewards
+        </button>
+      </div>`
+    : ""
+}
       }
 
       <div style="margin-top:12px;border-top:1px solid rgba(139,101,15,.45);padding-top:8px;">

@@ -54,10 +54,6 @@ function ensureRewards(save) {
     save.rewards = {};
   }
 
-  if (!Array.isArray(save.rewards.slotOptions)) {
-    save.rewards.slotOptions = [];
-  }
-
   save.rewards.slotCoins = Math.floor(Number(save.rewards.slotCoins || 0));
 
   if (!save.rewards.lastCoinAt) {
@@ -159,6 +155,8 @@ router.post("/spin", authMiddleware, async (req, res) => {
     save.lastSeenAt = Date.now();
 
     await savePlayerSave(req.user.id, save);
+	
+	save.rewards.slotOptions.splice(index, 1);
 
     res.json({
       success: true,
@@ -270,8 +268,9 @@ router.post("/claim", authMiddleware, async (req, res) => {
       );
     }
 
-    save.rewards.slotOptions = [];
     save.lastSeenAt = Date.now();
+	
+	save.rewards.slotOptions.splice(index, 1);
 
     await savePlayerSave(req.user.id, save);
 
