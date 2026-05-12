@@ -79,6 +79,8 @@ router.post("/perform", authMiddleware, async (req, res) => {
 
     ensureRebirthData(save);
 
+	const level = Number(save.level || 1);
+
     const reward = calculateRebirthRewardForLevel(level);
 
     if (reward <= 0) {
