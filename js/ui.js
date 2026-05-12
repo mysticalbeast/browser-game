@@ -5645,6 +5645,40 @@ function getRebirthUpgradeCost(upgrade) {
   return Math.floor(upgrade.cost * Math.pow(1.5, level));
 }
 
+async function requestBackendRebirthUpgrade(key) {
+  const token = getAuthToken?.();
+
+  if (!token) {
+    showFilterNotification("sell", "Login required to buy rebirth upgrades.");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/rebirth/upgrade`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ key })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      showFilterNotification("sell", data?.message || "Rebirth upgrade failed.");
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.warn("Rebirth upgrade request failed:", error);
+    showFilterNotification("sell", "Rebirth upgrade request failed.");
+    return null;
+  }
+}
+
+
 async function buyRebirthUpgrade(key) {
   if (!state.rebirthUpgrades) state.rebirthUpgrades = {};
   if (!state.rebirth) state.rebirth = { count: 0, coins: 0 };
