@@ -52,22 +52,6 @@ function getEnhanceCost(item) {
   };
 }
 
-function ensureDepot(save) {
-  if (!save.depot || typeof save.depot !== "object") {
-    save.depot = {};
-  }
-
-  if (!Array.isArray(save.depot.tabs)) {
-    save.depot.tabs = [];
-  }
-
-  for (let t = 0; t < 5; t++) {
-    if (!Array.isArray(save.depot.tabs[t])) {
-      save.depot.tabs[t] = Array(40).fill(null);
-    }
-  }
-}
-
 function ensureEquipment(save) {
   if (!save.equipment || typeof save.equipment !== "object") {
     save.equipment = {};
