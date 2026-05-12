@@ -2944,6 +2944,10 @@ function renderRewardsPanel() {
 
   const spinning = state.rewards.slotSpinning;
   const options = hydrateSlotRewards(state.rewards.slotOptions || []);
+  
+  if (state.rewards.slotSpinning && options.length === 0) {
+  state.rewards.slotSpinning = false;
+}
 
   const displayRewards = spinning
     ? [
