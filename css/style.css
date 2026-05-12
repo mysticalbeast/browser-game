@@ -641,40 +641,525 @@ small {
   opacity: 0.5;
 }
 
-.slotReelBox {
-  height: 58px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(#2a1a0b, #120a03);
-  border: 1px solid #6d4e0d;
-  border-radius: 8px;
-  font-size: 30px;
+/* =========================
+   REWARDS SLOT MACHINE
+========================= */
+
+.slotMachineWrapper {
+  border: 2px solid #8b650f;
+  border-radius: 12px;
+
+  padding: 14px;
+
+  background:
+    radial-gradient(circle at top left, rgba(255,207,74,.10), transparent 35%),
+    linear-gradient(180deg, rgba(28,18,6,.98), rgba(8,6,3,.98));
+
   box-shadow:
-    inset 0 0 8px rgba(0,0,0,.85),
-    0 0 6px rgba(255,207,74,.15);
+    inset 0 0 18px rgba(255,207,74,.05),
+    0 0 22px rgba(0,0,0,.75);
+
+  margin-top: 12px;
+}
+
+.slotMachineTop {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.slotMachineTitle {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffcf4a;
+
+  text-shadow:
+    0 0 8px rgba(255,207,74,.35),
+    1px 1px 2px #000;
+}
+
+.slotMachineSub {
+  margin-top: 4px;
+  color: #bda76a;
+  font-size: 11px;
+}
+
+.slotMachineReels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+
+  margin-bottom: 16px;
+}
+
+.slotReel {
+  position: relative;
+
+  height: 150px;
+
+  border: 2px solid #6d4e0d;
+  border-radius: 10px;
+
   overflow: hidden;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(60,40,10,.95),
+      rgba(10,7,3,.98)
+    );
+
+  box-shadow:
+    inset 0 0 20px rgba(0,0,0,.9),
+    0 0 10px rgba(255,207,74,.08);
 }
 
-.slotReelIcon {
-  display: inline-block;
-  transition: transform 70ms linear;
-  filter: drop-shadow(0 0 4px rgba(255,255,255,.35));
+.slotReel::before,
+.slotReel::after {
+  content: "";
+
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 26px;
+
+  z-index: 5;
+  pointer-events: none;
 }
 
-.slotReelStop {
-  animation: slotStopPop 350ms ease-out;
+.slotReel::before {
+  top: 0;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,.95),
+      transparent
+    );
 }
 
-@keyframes slotStopPop {
+.slotReel::after {
+  bottom: 0;
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(0,0,0,.95),
+      transparent
+    );
+}
+
+.slotReelTrack {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  transition:
+    transform 120ms linear;
+}
+
+.slotRewardCard {
+  width: 100%;
+  height: 150px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  text-align: center;
+}
+
+.slotRewardIcon {
+  font-size: 52px;
+
+  filter:
+    drop-shadow(0 0 8px rgba(255,255,255,.15));
+}
+
+.slotRewardName {
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+
+  padding: 0 8px;
+}
+
+.slotRewardRarity {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.slotRewardCard.common .slotRewardRarity {
+  color: #cfcfcf;
+}
+
+.slotRewardCard.uncommon .slotRewardRarity {
+  color: #53ff7a;
+}
+
+.slotRewardCard.rare .slotRewardRarity {
+  color: #66b3ff;
+}
+
+.slotRewardCard.epic .slotRewardRarity {
+  color: #c47dff;
+}
+
+.slotRewardCard.legendary .slotRewardRarity {
+  color: #ffcf4a;
+}
+
+.slotRewardCard.mythic .slotRewardRarity {
+  color: #ff6b6b;
+}
+
+.slotCenterLine {
+  position: absolute;
+
+  left: 0;
+  top: 50%;
+
+  width: 100%;
+  height: 3px;
+
+  transform: translateY(-50%);
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,207,74,.9),
+      transparent
+    );
+
+  box-shadow:
+    0 0 10px rgba(255,207,74,.65);
+
+  z-index: 4;
+}
+
+.slotControls {
+  display: flex;
+  gap: 8px;
+}
+
+.slotSpinBtn,
+.slotClaimBtn {
+  flex: 1;
+
+  height: 42px;
+
+  border: 1px solid #8b650f;
+  border-radius: 8px;
+
+  background:
+    linear-gradient(180deg, #3a2608, #1a1004);
+
+  color: #ffcf4a;
+  font-weight: bold;
+  font-size: 13px;
+
+  cursor: pointer;
+
+  transition: 0.15s;
+}
+
+.slotSpinBtn:hover,
+.slotClaimBtn:hover {
+  transform: translateY(-1px);
+
+  border-color: #ffcf4a;
+
+  box-shadow:
+    0 0 12px rgba(255,207,74,.25);
+}
+
+.slotSpinBtn:disabled,
+.slotClaimBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.slotWinnerGlow {
+  animation: slotWinnerGlow 1s ease-in-out infinite;
+}
+
+@keyframes slotWinnerGlow {
   0% {
-    transform: scale(1.35);
-    filter: drop-shadow(0 0 10px rgba(255,207,74,1));
+    box-shadow:
+      inset 0 0 0 rgba(255,207,74,0),
+      0 0 0 rgba(255,207,74,0);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 0 18px rgba(255,207,74,.15),
+      0 0 18px rgba(255,207,74,.35);
+  }
+
+  100% {
+    box-shadow:
+      inset 0 0 0 rgba(255,207,74,0),
+      0 0 0 rgba(255,207,74,0);
+  }
+}
+
+.slotMachineFinished {
+  animation: slotMachineFinished 450ms ease-out;
+}
+
+@keyframes slotMachineFinished {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.02);
   }
 
   100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 4px rgba(255,255,255,.35));
   }
+}
+
+.slotMachineInfoRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.slotInfoBox {
+  border: 1px solid #6d4e0d;
+  border-radius: 8px;
+  background: rgba(0,0,0,.35);
+  padding: 7px;
+  text-align: center;
+}
+
+.slotInfoBox span {
+  display: block;
+  color: #bda76a;
+  font-size: 10px;
+}
+
+.slotInfoBox b {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  margin-top: 3px;
+}
+
+.slotCabinet {
+  position: relative;
+  border: 2px solid #9b6f11;
+  border-radius: 14px;
+  padding: 14px 44px 14px 14px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,207,74,.16), transparent 35%),
+    linear-gradient(180deg, #3a1608, #120703);
+  box-shadow:
+    inset 0 0 20px rgba(255,207,74,.08),
+    0 0 20px rgba(0,0,0,.8);
+}
+
+.slotCabinetLights {
+  position: absolute;
+  inset: 5px;
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow:
+    0 0 8px rgba(255,207,74,.8),
+    inset 0 0 10px rgba(255,207,74,.14);
+  animation: slotLightsPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes slotLightsPulse {
+  0%, 100% { opacity: .45; }
+  50% { opacity: 1; }
+}
+
+.slotReelWindow {
+  border: 2px solid #d39822;
+  border-radius: 12px;
+  padding: 10px;
+  background: #050302;
+  box-shadow: inset 0 0 18px #000;
+}
+
+.slotLever {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 30px;
+  height: 120px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.slotLever:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.slotLeverStick {
+  position: absolute;
+  left: 13px;
+  top: 24px;
+  width: 5px;
+  height: 78px;
+  border-radius: 999px;
+  background: linear-gradient(#ffd36a, #8b4c0a);
+  box-shadow: 0 0 8px rgba(255,207,74,.5);
+}
+
+.slotLeverBall {
+  position: absolute;
+  left: 3px;
+  top: 5px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #fff4c8, #ff3131 35%, #7a0808 100%);
+  box-shadow:
+    0 0 10px rgba(255,50,50,.8),
+    inset 0 0 6px rgba(0,0,0,.55);
+}
+
+.slotLever.pulling .slotLeverStick,
+.slotLever.pulling .slotLeverBall {
+  animation: slotLeverPull 550ms ease-out;
+}
+
+@keyframes slotLeverPull {
+  0% { transform: translateY(0); }
+  45% { transform: translateY(28px); }
+  100% { transform: translateY(0); }
+}
+
+.slotRewardsPanel {
+  margin-top: 12px;
+  border-top: 1px solid rgba(139,101,15,.45);
+  padding-top: 10px;
+}
+
+.slotRewardsTitle {
+  color: #ffcf4a;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.slotRewardClaimGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.slotClaimCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #6d4e0d;
+  border-radius: 9px;
+  padding: 8px;
+  background: rgba(0,0,0,.35);
+}
+
+.slotClaimIcon {
+  font-size: 28px;
+  width: 36px;
+  text-align: center;
+}
+
+.slotClaimText {
+  flex: 1;
+  min-width: 0;
+}
+
+.slotClaimText b {
+  display: block;
+  color: #fff;
+  font-size: 12px;
+}
+
+.slotClaimText span {
+  display: block;
+  color: #bda76a;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.slotClaimTier {
+  color: #ffcf4a;
+  font-size: 9px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.slotOddsSection {
+  margin-top: 12px;
+  border-top: 1px solid rgba(139,101,15,.45);
+  padding-top: 8px;
+}
+
+.slotOddsToggle {
+  width: 100%;
+  border: 1px solid #8b650f;
+  border-radius: 7px;
+  background: #181006;
+  color: #ffcf4a;
+  padding: 7px;
+  cursor: pointer;
+}
+
+.slotOddsGrid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.slotOddsItem {
+  display: grid;
+  grid-template-columns: 28px 1fr 52px;
+  gap: 7px;
+  align-items: center;
+  border: 1px solid #5c4310;
+  border-radius: 7px;
+  padding: 6px;
+  background: rgba(0,0,0,.35);
+}
+
+.slotOddsIcon {
+  font-size: 20px;
+  text-align: center;
+}
+
+.slotOddsName {
+  color: #d9b85c;
+  font-size: 11px;
+}
+
+.slotOddsPercent {
+  color: #fff;
+  font-size: 11px;
+  text-align: right;
 }
 
 .bossMonster {

@@ -2080,58 +2080,129 @@ function pickWeightedSlotReward() {
 }
 
 function startSlotRollAnimation(finalRewards) {
-  const slots = document.querySelectorAll(".slotReelIcon");
-  if (!slots.length) return;
+  const tracks = document.querySelectorAll(".slotReelTrack");
 
-  const rewardIcons = SLOT_REWARD_POOL.map(reward => reward.icon);
-  const stopped = [false, false, false];
-  let tick = 0;
+  if (!tracks.length) return;
+
+  const rewardPool = SLOT_REWARD_POOL.map(reward => ({
+    ...reward,
+    tier: getRewardTier(reward)
+  }));
 
   if (slotRollInterval) {
     clearInterval(slotRollInterval);
     slotRollInterval = null;
   }
 
+  let offset = 0;
+
+  function createCard(reward) {
+    const tier = reward.tier || getRewardTier(reward);
+    const tierClass = String(tier.name || "common").toLowerCase();
+
+    return `
+      <div class="slotRewardCard ${tierClass}">
+        <div class="slotRewardIcon">${reward.icon}</div>
+        <div class="slotRewardName">${reward.name}</div>
+        <div class="slotRewardRarity">${tier.name}</div>
+      </div>
+    `;
+  }
+
+  tracks.forEach(track => {
+    let html = "";
+
+    for (let i = 0; i < 18; i++) {
+      const randomReward =
+        rewardPool[rand(0, rewardPool.length - 1)];
+
+      html += createCard(randomReward);
+    }
+
+    track.innerHTML = html;
+    track.style.transform = "translateY(0px)";
+  });
+
   slotRollInterval = setInterval(() => {
-    tick++;
+    offset += 35;
 
-    slots.forEach((slot, index) => {
-      if (stopped[index]) return;
-
-      const randomIcon = rewardIcons[rand(0, rewardIcons.length - 1)];
-      slot.textContent = randomIcon;
-      slot.style.transform = `translateY(${tick % 2 === 0 ? "-3px" : "3px"}) scale(1.08)`;
+    tracks.forEach(track => {
+      track.style.transform =
+        `translateY(-${offset}px)`;
     });
+
+    if (offset > 1800) {
+      offset = 0;
+
+      tracks.forEach(track => {
+        track.style.transition = "none";
+        track.style.transform = "translateY(0px)";
+
+        void track.offsetHeight;
+
+        track.style.transition =
+          "transform 120ms linear";
+      });
+    }
   }, 70);
 
-  slots.forEach((slot, index) => {
+  tracks.forEach((track, index) => {
     setTimeout(() => {
-      stopped[index] = true;
+      const reward = finalRewards[index];
+      const tier = getRewardTier(reward);
 
-      slot.textContent = finalRewards[index].icon;
-      slot.style.transform = "translateY(0) scale(1)";
-      slot.classList.add("slotReelStop");
+      clearInterval(slotRollInterval);
+
+      track.style.transition =
+        "transform 700ms cubic-bezier(.17,.67,.25,1)";
+
+      track.innerHTML = `
+        ${Array.from({ length: 8 }).map(() => {
+          const filler =
+            rewardPool[rand(0, rewardPool.length - 1)];
+
+          return createCard(filler);
+        }).join("")}
+
+        ${createCard({
+          ...reward,
+          tier
+        })}
+
+        ${Array.from({ length: 4 }).map(() => {
+          const filler =
+            rewardPool[rand(0, rewardPool.length - 1)];
+
+          return createCard(filler);
+        }).join("")}
+      `;
+
+      track.style.transform = "translateY(-1200px)";
 
       setTimeout(() => {
-        slot.classList.remove("slotReelStop");
-      }, 350);
+        const reel =
+          track.closest(".slotReel");
 
-      if (index === slots.length - 1) {
-        if (slotRollInterval) {
-          clearInterval(slotRollInterval);
-          slotRollInterval = null;
+        reel?.classList.add("slotWinnerGlow");
+
+        if (index === tracks.length - 1) {
+          state.rewards.slotOptions =
+            hydrateSlotRewards(finalRewards);
+
+          state.rewards.slotSpinning = false;
+
+          addLog(
+            "🎰 Slot machine stopped. Claim your rewards."
+          );
+
+          setTimeout(() => {
+            renderRewardsPanel();
+            updateMenuIndicators();
+            saveGame();
+          }, 500);
         }
-
-        state.rewards.slotOptions = finalRewards;
-        state.rewards.slotSpinning = false;
-
-        addLog("🎰 Slot machine stopped. Pick one reward.");
-
-        renderRewardsPanel();
-        updateMenuIndicators();
-        saveGame();
-      }
-    }, 1100 + index * 500);
+      }, 700);
+    }, 1400 + index * 700);
   });
 }
 
@@ -2880,218 +2951,158 @@ function renderRewardsPanel() {
   updateRewardCoins();
 
   const spinning = state.rewards.slotSpinning;
-  const options = state.rewards.slotOptions || [];
+  const options = hydrateSlotRewards(state.rewards.slotOptions || []);
 
-  const slotDisplay = spinning
-    ? ["❓", "❓", "❓"]
-    : options.length
-      ? options.map(r => r.icon)
-      : ["🍒", "⭐", "💎"];
+  const displayRewards = spinning
+    ? [
+        { icon: "❓", name: "Spinning", weight: 40 },
+        { icon: "❓", name: "Spinning", weight: 40 },
+        { icon: "❓", name: "Spinning", weight: 40 }
+      ]
+    : options.length > 0
+      ? options
+      : [
+          { icon: "🍒", name: "Ready", weight: 60 },
+          { icon: "⭐", name: "Ready", weight: 35 },
+          { icon: "💎", name: "Ready", weight: 5 }
+        ];
+
+  const canSpin =
+    state.rewards.slotCoins > 0 &&
+    !spinning &&
+    options.length === 0;
 
   box.innerHTML = `
-    <div style="background:#171006;border:1px solid #76530f;border-radius:8px;padding:10px;margin-top:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="color:#fff;font-weight:bold;">Slot Machine</div>
-          <small>Earn 1 Silver Token every hour. Spin, then pick one of the three rewards.</small>
-        </div>
-        <div style="text-align:right;">
-          <div style="color:#d9d9d9;font-weight:bold;text-shadow:0 0 6px #ffffff;">⚪ ${state.rewards.slotCoins}</div>
-          <small>Next: ${formatCooldown(nextSlotCoinRemaining())}</small>
+    <div class="slotMachineWrapper">
+      <div class="slotMachineTop">
+        <div class="slotMachineTitle">🎰 SLOT MACHINE</div>
+        <div class="slotMachineSub">
+          Earn 1 Silver Token every hour. Pull the lever and claim all rewards.
         </div>
       </div>
 
-      <div style="margin-top:8px;font-size:11px;color:#c7a044;">
-        Skin Shards: <span style="color:#fff;">${fmt(getSkinShards?.() || 0)}</span>
-      </div>
-
-      <div style="margin:12px auto 8px;width:230px;background:#080603;border:2px solid #8b650f;border-radius:10px;padding:10px;box-shadow:inset 0 0 12px #000;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          ${slotDisplay.map(icon => `
-            <div class="slotReelBox">
-              <span class="slotReelIcon">${icon}</span>
-            </div>
-          `).join("")}
+      <div class="slotMachineInfoRow">
+        <div class="slotInfoBox">
+          <span>⚪ Silver Tokens</span>
+          <b>${fmt(state.rewards.slotCoins || 0)}</b>
         </div>
 
-        <button class="upgradeBtn" style="margin-top:10px;text-align:center;font-size:13px;" ${state.rewards.slotCoins > 0 && !spinning && options.length === 0 ? "" : "disabled"} onclick="spinSlotMachine()">
-          🎰 Pull Lever
-        </button>
-      </div>
-
-${
-  options.length > 0
-    ? `<div style="margin-top:10px;">
-        <div style="
-          color:#35d66b;
-          font-weight:bold;
-          margin-bottom:6px;
-        ">
-          🎁 Rewards:
+        <div class="slotInfoBox">
+          <span>Next Token</span>
+          <b>${formatCooldown(nextSlotCoinRemaining())}</b>
         </div>
 
-        ${options.map((reward, index) => {
-          const tier = getRewardTier(reward);
+        <div class="slotInfoBox">
+          <span>💎 Skin Shards</span>
+          <b>${fmt(getSkinShards?.() || 0)}</b>
+        </div>
+      </div>
 
-          return `
-            <div style="
-              display:flex;
-              align-items:center;
-              gap:8px;
-              padding:7px;
-              margin-top:6px;
-              border:1px solid ${tier.color};
-              border-radius:8px;
-              background:linear-gradient(
-                90deg,
-                rgba(255,255,255,.04),
-                rgba(0,0,0,.2)
-              );
-              box-shadow:0 0 8px ${tier.glow};
-            ">
-              <span style="
-                font-size:24px;
-                width:32px;
-                text-align:center;
-                filter:drop-shadow(0 0 5px ${tier.color});
-              ">
-                ${reward.icon}
-              </span>
+      <div class="slotCabinet">
+        <div class="slotCabinetLights"></div>
 
-              <span style="flex:1;">
-                <span style="
-                  color:${tier.color};
-                  font-weight:bold;
-                ">
-                  ${reward.name}
-                </span>
+        <div class="slotReelWindow">
+          <div class="slotMachineReels">
+            ${displayRewards.map(reward => {
+              const tier = getRewardTier(reward);
+              const tierClass = String(tier.name || "common").toLowerCase();
 
-                <span style="
-                  font-size:9px;
-                  color:${tier.color};
-                  margin-left:4px;
-                  text-transform:uppercase;
-                ">
-                  ${tier.name}
-                </span>
-
-                <br>
-
-                <small>${reward.desc}</small>
-              </span>
-            </div>
-          `;
-        }).join("")}
-
-        <button
-          class="upgradeBtn"
-          style="
-            margin-top:10px;
-            text-align:center;
-            font-size:13px;
-            border-color:#35d66b;
-            box-shadow:0 0 10px rgba(53,214,107,.4);
-          "
-          onclick="claimAllSlotRewards()"
-        >
-          🎁 Claim All Rewards
-        </button>
-      </div>`
-    : ""
-}
-      }
-
-      <div style="margin-top:12px;border-top:1px solid rgba(139,101,15,.45);padding-top:8px;">
-        <button class="upgradeBtn" style="
-          text-align:center;
-          padding:6px;
-          font-size:12px;
-          border-color:#bfc7d5;
-          color:#e6edf7;
-          background:linear-gradient(#272d35, #11151a);
-        " onclick="toggleRewardOddsList()">
-          ${state.rewards.showOdds ? "Hide Reward Odds" : "Show Reward Odds"}
-        </button>
-
-        ${state.rewards.showOdds ? `
-          <div style="
-            margin-top:8px;
-            background:#0b0905;
-            border:1px solid #6d4e0d;
-            border-radius:8px;
-            padding:8px;
-            max-height:260px;
-            overflow-y:auto;
-          ">
-            <div style="
-              color:#ffcf4a;
-              font-weight:bold;
-              margin-bottom:6px;
-              text-align:center;
-            ">
-              Possible Rewards
-            </div>
-
-            ${SLOT_REWARD_POOL
-              .slice()
-              .sort((a, b) => a.weight - b.weight)
-              .map(reward => {
-                const tier = getRewardTier(reward);
-                const odds = getRewardOddsPercent(reward);
-
-                return `
-                  <div style="
-                    display:flex;
-                    align-items:center;
-                    gap:8px;
-                    padding:6px;
-                    margin-top:5px;
-                    border:1px solid ${tier.color};
-                    border-radius:7px;
-                    background:linear-gradient(90deg, rgba(255,255,255,.04), rgba(0,0,0,.25));
-                    box-shadow:0 0 6px ${tier.glow};
-                  ">
-                    <div style="
-                      width:32px;
-                      height:32px;
-                      display:grid;
-                      place-items:center;
-                      border-radius:6px;
-                      background:#171006;
-                      font-size:22px;
-                      filter:drop-shadow(0 0 4px ${tier.color});
-                    ">
-                      ${reward.icon}
-                    </div>
-
-                    <div style="flex:1;min-width:0;">
-                      <div style="
-                        color:${tier.color};
-                        font-size:12px;
-                        font-weight:bold;
-                        white-space:nowrap;
-                        overflow:hidden;
-                        text-overflow:ellipsis;
-                      ">
-                        ${reward.name}
-                      </div>
-                      <small>${reward.desc}</small>
-                    </div>
-
-                    <div style="
-                      min-width:54px;
-                      text-align:right;
-                      color:#fff;
-                      font-size:12px;
-                      font-weight:bold;
-                    ">
-                      ${odds}%
+              return `
+                <div class="slotReel ${options.length > 0 ? "slotWinnerGlow" : ""}">
+                  <div class="slotCenterLine"></div>
+                  <div class="slotReelTrack">
+                    <div class="slotRewardCard ${tierClass}">
+                      <div class="slotRewardIcon">${reward.icon}</div>
+                      <div class="slotRewardName">${reward.name || "Reward"}</div>
+                      <div class="slotRewardRarity">${tier.name || "Common"}</div>
                     </div>
                   </div>
-                `;
-              }).join("")}
+                </div>
+              `;
+            }).join("")}
           </div>
-        ` : ""}
+        </div>
+
+        <button
+          class="slotLever ${canSpin ? "" : "disabled"} ${spinning ? "pulling" : ""}"
+          ${canSpin ? "" : "disabled"}
+          onclick="spinSlotMachine()"
+          title="Pull Lever"
+        >
+          <span class="slotLeverStick"></span>
+          <span class="slotLeverBall"></span>
+        </button>
+
+        <button
+          class="slotSpinBtn"
+          ${canSpin ? "" : "disabled"}
+          onclick="spinSlotMachine()"
+        >
+          🎰 PULL LEVER
+        </button>
+      </div>
+
+      ${
+        options.length > 0
+          ? `
+            <div class="slotRewardsPanel">
+              <div class="slotRewardsTitle">🎁 Your Rewards</div>
+
+              <div class="slotRewardClaimGrid">
+                ${options.map(reward => {
+                  const tier = getRewardTier(reward);
+                  const tierClass = String(tier.name || "common").toLowerCase();
+
+                  return `
+                    <div class="slotClaimCard ${tierClass}">
+                      <div class="slotClaimIcon">${reward.icon}</div>
+                      <div class="slotClaimText">
+                        <b>${reward.name}</b>
+                        <span>${reward.desc}</span>
+                      </div>
+                      <div class="slotClaimTier">${tier.name}</div>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+
+              <button class="slotClaimBtn" onclick="claimAllSlotRewards()">
+                🎁 CLAIM ALL REWARDS
+              </button>
+            </div>
+          `
+          : ""
+      }
+
+      <div class="slotOddsSection">
+        <button class="slotOddsToggle" onclick="toggleRewardOddsList()">
+          ${state.rewards.showOdds ? "Hide Reward Odds ▲" : "Show Reward Odds ▼"}
+        </button>
+
+        ${
+          state.rewards.showOdds
+            ? `
+              <div class="slotOddsGrid">
+                ${SLOT_REWARD_POOL
+                  .slice()
+                  .sort((a, b) => a.weight - b.weight)
+                  .map(reward => {
+                    const tier = getRewardTier(reward);
+                    const tierClass = String(tier.name || "common").toLowerCase();
+                    const odds = getRewardOddsPercent(reward);
+
+                    return `
+                      <div class="slotOddsItem ${tierClass}">
+                        <span class="slotOddsIcon">${reward.icon}</span>
+                        <span class="slotOddsName">${reward.name}</span>
+                        <span class="slotOddsPercent">${odds}%</span>
+                      </div>
+                    `;
+                  }).join("")}
+              </div>
+            `
+            : ""
+        }
       </div>
     </div>
   `;
