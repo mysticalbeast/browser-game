@@ -35,7 +35,11 @@ const SLOT_REWARD_POOL = [
 ];
 
 function pickWeightedSlotReward() {
-  const total = SLOT_REWARD_POOL.reduce((sum, reward) => sum + reward.weight, 0);
+  const total = SLOT_REWARD_POOL.reduce(
+    (sum, reward) => sum + reward.weight,
+    0
+  );
+
   let roll = Math.random() * total;
 
   for (const reward of SLOT_REWARD_POOL) {
@@ -52,6 +56,10 @@ function pickWeightedSlotReward() {
 function ensureRewards(save) {
   if (!save.rewards || typeof save.rewards !== "object") {
     save.rewards = {};
+  }
+
+  if (!Array.isArray(save.rewards.slotOptions)) {
+    save.rewards.slotOptions = [];
   }
 
   save.rewards.slotCoins = Math.floor(Number(save.rewards.slotCoins || 0));
@@ -155,8 +163,6 @@ router.post("/spin", authMiddleware, async (req, res) => {
     save.lastSeenAt = Date.now();
 
     await savePlayerSave(req.user.id, save);
-	
-	save.rewards.slotOptions.splice(index, 1);
 
     res.json({
       success: true,
@@ -187,6 +193,17 @@ router.post("/claim", authMiddleware, async (req, res) => {
     ensureRewards(save);
     ensureRewardContainers(save);
 
+    if (
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= save.rewards.slotOptions.length
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reward."
+      });
+    }
+
     const reward = save.rewards.slotOptions[index];
 
     if (!reward) {
@@ -208,45 +225,53 @@ router.post("/claim", authMiddleware, async (req, res) => {
 
     if (reward.type === "material") {
       save.materials[reward.materialKey] = Math.floor(
-        Number(save.materials[reward.materialKey] || 0) + Number(reward.amount || 0)
+        Number(save.materials[reward.materialKey] || 0) +
+        Number(reward.amount || 0)
       );
     }
 
     if (reward.type === "fish") {
       save.fishing.fish = Math.floor(
-        Number(save.fishing.fish || 0) + Number(reward.amount || 0)
+        Number(save.fishing.fish || 0) +
+        Number(reward.amount || 0)
       );
 
       save.fishing.caughtFish = Math.floor(
-        Number(save.fishing.caughtFish || 0) + Number(reward.amount || 0)
+        Number(save.fishing.caughtFish || 0) +
+        Number(reward.amount || 0)
       );
     }
 
     if (reward.type === "stars") {
       save.stars = Math.floor(
-        Number(save.stars || 0) + Number(reward.amount || 0)
+        Number(save.stars || 0) +
+        Number(reward.amount || 0)
       );
 
       save.starsEarned = Math.floor(
-        Number(save.starsEarned || 0) + Number(reward.amount || 0)
+        Number(save.starsEarned || 0) +
+        Number(reward.amount || 0)
       );
     }
 
     if (reward.type === "slotCoin") {
       save.rewards.slotCoins = Math.floor(
-        Number(save.rewards.slotCoins || 0) + Number(reward.amount || 0)
+        Number(save.rewards.slotCoins || 0) +
+        Number(reward.amount || 0)
       );
     }
 
     if (reward.type === "skillPoint") {
       save.skillPoints = Math.floor(
-        Number(save.skillPoints || 0) + Number(reward.amount || 0)
+        Number(save.skillPoints || 0) +
+        Number(reward.amount || 0)
       );
     }
 
     if (reward.type === "skinShard") {
       save.skins.shards = Math.floor(
-        Number(save.skins.shards || 0) + Number(reward.amount || 0)
+        Number(save.skins.shards || 0) +
+        Number(reward.amount || 0)
       );
     }
 
@@ -257,7 +282,9 @@ router.post("/claim", authMiddleware, async (req, res) => {
       addGold(save, goldAmount);
       addExp(save, expAmount);
 
-      save.skillPoints = Math.floor(Number(save.skillPoints || 0) + 2);
+      save.skillPoints = Math.floor(
+        Number(save.skillPoints || 0) + 2
+      );
 
       save.materials.redEssence = Math.floor(
         Number(save.materials.redEssence || 0) + 10
@@ -268,9 +295,8 @@ router.post("/claim", authMiddleware, async (req, res) => {
       );
     }
 
+    save.rewards.slotOptions.splice(index, 1);
     save.lastSeenAt = Date.now();
-	
-	save.rewards.slotOptions.splice(index, 1);
 
     await savePlayerSave(req.user.id, save);
 
