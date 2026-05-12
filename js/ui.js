@@ -2185,21 +2185,24 @@ function startSlotRollAnimation(finalRewards) {
 
         reel?.classList.add("slotWinnerGlow");
 
-        if (index === tracks.length - 1) {
-          state.rewards.slotOptions =
-            hydrateSlotRewards(finalRewards);
+if (index === tracks.length - 1) {
+  state.rewards.slotOptions =
+    hydrateSlotRewards(finalRewards);
 
-          state.rewards.slotSpinning = false;
+  state.rewards.slotSpinning = false;
 
-          addLog(
-            "🎰 Slot machine stopped. Claim your rewards."
-          );
+  addLog("🎰 Rewards granted!");
 
-          setTimeout(() => {
-            renderRewardsPanel();
-            updateMenuIndicators();
-            saveGame();
-          }, 500);
+  setTimeout(async () => {
+while ((state.rewards.slotOptions || []).length > 0) {
+  await claimSlotReward(0);
+}
+
+    renderRewardsPanel();
+    updateMenuIndicators();
+    saveGame();
+  }, 700);
+}
         }
       }, 700);
     }, 1400 + index * 700);
@@ -3032,47 +3035,7 @@ function renderRewardsPanel() {
           <span class="slotLeverStick"></span>
           <span class="slotLeverBall"></span>
         </button>
-
-        <button
-          class="slotSpinBtn"
-          ${canSpin ? "" : "disabled"}
-          onclick="spinSlotMachine()"
-        >
-          🎰 PULL LEVER
-        </button>
       </div>
-
-      ${
-        options.length > 0
-          ? `
-            <div class="slotRewardsPanel">
-              <div class="slotRewardsTitle">🎁 Your Rewards</div>
-
-              <div class="slotRewardClaimGrid">
-                ${options.map(reward => {
-                  const tier = getRewardTier(reward);
-                  const tierClass = String(tier.name || "common").toLowerCase();
-
-                  return `
-                    <div class="slotClaimCard ${tierClass}">
-                      <div class="slotClaimIcon">${reward.icon}</div>
-                      <div class="slotClaimText">
-                        <b>${reward.name}</b>
-                        <span>${reward.desc}</span>
-                      </div>
-                      <div class="slotClaimTier">${tier.name}</div>
-                    </div>
-                  `;
-                }).join("")}
-              </div>
-
-              <button class="slotClaimBtn" onclick="claimAllSlotRewards()">
-                🎁 CLAIM ALL REWARDS
-              </button>
-            </div>
-          `
-          : ""
-      }
 
       <div class="slotOddsSection">
         <button class="slotOddsToggle" onclick="toggleRewardOddsList()">
