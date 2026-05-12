@@ -2202,15 +2202,7 @@ function startSlotRollAnimation(finalRewards) {
           addLog("🎰 Rewards granted!");
 
 setTimeout(async () => {
-  const rewardCount = rewards.length;
-
-  for (let i = 0; i < rewardCount; i++) {
-    await claimSlotReward(0);
-
-    await new Promise(resolve =>
-      setTimeout(resolve, 150)
-    );
-  }
+  await claimAllSlotRewards();
 
   renderRewardsPanel();
   updateMenuIndicators();
@@ -2476,73 +2468,52 @@ async function claimSlotReward(index) {
 }
 
 async function claimAllSlotRewards() {
-  const rewards = [...(state.rewards.slotOptions || [])];
+  const token = getAuthToken?.();
 
-  if (rewards.length <= 0) return;
-
-  for (let i = 0; i < rewards.length; i++) {
-    await claimSlotReward(i);
-  }
-}
-
-function updateMenuIndicators() {
-  const skillsBtn = document.getElementById("skillsBtn");
-  const weaponsBtn = document.getElementById("weaponsBtn");
-  const travelBtn = document.getElementById("travelBtn");
-  const rewardsBtn = document.getElementById("rewardsBtn");
-  const rebirthBtn = document.getElementById("rebirthBtn");
-
-  if (rebirthBtn) {
-    rebirthBtn.classList.toggle("pulse", calculateRebirthReward() > 0);
+  if (!token) {
+    showFilterNotification("system", "Login required to claim rewards.");
+    return;
   }
 
-  if (skillsBtn) {
-    skillsBtn.classList.remove("active");
-
-    if ((state.skillPoints || 0) > 0) {
-      skillsBtn.innerHTML = `⚡<br>Skills (${state.skillPoints})`;
-      skillsBtn.classList.add("glow");
-    } else {
-      skillsBtn.innerHTML = "⚡<br>Skills";
-      skillsBtn.classList.remove("glow");
-    }
-  }
-
-  if (weaponsBtn) {
-    const hasNewWeapon = WEAPONS.some(w =>
-      state.level >= w.levelReq &&
-      !ownsWeapon(w.name)
-    );
-
-    weaponsBtn.classList.remove("active");
-    weaponsBtn.classList.toggle("glow", hasNewWeapon);
-  }
-
-  if (travelBtn) {
-    if (!Array.isArray(state.visitedZones)) {
-      state.visitedZones = [];
-    }
-
-    const hasNewZone = ZONES.some(zone => {
-      if (zone.isEventZone) return false;
-      if (zone.id === OBSERVATORY_ZONE_ID) return false;
-      if (zone.id === SIEGE_ZONE_ID) return false;
-
-      return state.level >= zone.levelReq &&
-        !state.visitedZones.includes(zone.id);
+  try {
+    const response = await fetch(`${API_URL}/rewards/claim-all`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
     });
 
-    travelBtn.classList.remove("active");
-    travelBtn.classList.toggle("glow", hasNewZone);
-  }
+    const data = await response.json();
 
-  if (rewardsBtn) {
-    rewardsBtn.classList.remove("active");
-    rewardsBtn.classList.toggle(
-      "glow",
-      (state.rewards?.slotCoins || 0) > 0 ||
-      (state.rewards?.slotOptions?.length || 0) > 0
+    if (!response.ok || !data?.success) {
+      showFilterNotification(
+        "system",
+        data?.message || "Reward claim failed."
+      );
+      return;
+    }
+
+    Object.assign(state, data.save);
+
+    if (typeof normalizeLoadedState === "function") {
+      normalizeLoadedState();
+    }
+
+    state.rewards.slotOptions = [];
+
+    showFilterNotification(
+      "system",
+      `🎁 Claimed ${data.rewardsClaimed?.length || 0} rewards.`
     );
+
+    renderRewardsPanel();
+    updateMenuIndicators?.();
+    updateUI?.();
+    saveGame?.();
+  } catch (error) {
+    console.warn("Reward claim all request failed:", error);
+    showFilterNotification("system", "Reward claim request failed.");
   }
 }
 
