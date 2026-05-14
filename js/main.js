@@ -285,13 +285,13 @@ function spawnNecromancerProjectile(target, onHit) {
   const arena = document.getElementById("arena");
   const necro = document.getElementById("necromancerVisual");
 
-if (document.querySelectorAll(".necromancerProjectile").length >= 20) {
-  if (typeof onHit === "function") onHit();
-  return;
-}
+  if (document.querySelectorAll(".necromancerProjectile").length >= 8) {
+    if (typeof onHit === "function") onHit();
+    return;
+  }
 
   if (!arena || !necro || !target) {
-    onHit();
+    if (typeof onHit === "function") onHit();
     return;
   }
 
@@ -301,19 +301,16 @@ if (document.querySelectorAll(".necromancerProjectile").length >= 20) {
   const startX = necroRect.left - arenaRect.left + necroRect.width / 2;
   const startY = necroRect.top - arenaRect.top + necroRect.height / 2;
 
-  const endX = target.x;
-  const endY = target.y;
+  const endX = Number(target.x);
+  const endY = Number(target.y);
+
+  if (!Number.isFinite(endX) || !Number.isFinite(endY)) {
+    if (typeof onHit === "function") onHit();
+    return;
+  }
 
   const projectile = document.createElement("div");
   projectile.className = "necromancerProjectile";
-  
-  // random size variation
-const scale = 0.8 + Math.random() * 0.6;
-projectile.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(${Math.random() * 360}deg)`;
-
-// slight color variation
-const hue = 110 + Math.random() * 40;
-projectile.style.filter = `hue-rotate(${hue}deg) blur(1px)`;
 
   projectile.style.left = `${startX}px`;
   projectile.style.top = `${startY}px`;
@@ -323,18 +320,22 @@ projectile.style.filter = `hue-rotate(${hue}deg) blur(1px)`;
   const dx = endX - startX;
   const dy = endY - startY;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const speed = 5000;
-  const duration = Math.max(180, (distance / speed) * 1000);
 
-  projectile.animate(
+  const speed = 5000;
+  const duration = Math.min(
+    450,
+    Math.max(160, (distance / speed) * 1000)
+  );
+
+  const animation = projectile.animate(
     [
       {
         transform: "translate(-50%, -50%) scale(0.8)",
         opacity: 1
       },
       {
-        transform: `translate(${dx}px, ${dy}px) translate(-50%, -50%) scale(1.25)`,
-        opacity: 0.95
+        transform: `translate(${dx}px, ${dy}px) translate(-50%, -50%) scale(1.1)`,
+        opacity: 0.85
       }
     ],
     {
@@ -344,11 +345,25 @@ projectile.style.filter = `hue-rotate(${hue}deg) blur(1px)`;
     }
   );
 
-  setTimeout(() => {
+  const cleanup = () => {
     projectile.remove();
-    spawnNecromancerImpact(endX, endY);
-    onHit();
-  }, duration);
+
+    if (document.querySelectorAll(".necromancerImpact").length < 8) {
+      spawnNecromancerImpact(endX, endY);
+    }
+
+    if (typeof onHit === "function") {
+      onHit();
+    }
+  };
+
+  animation.onfinish = cleanup;
+
+  setTimeout(() => {
+    if (document.body.contains(projectile)) {
+      cleanup();
+    }
+  }, duration + 80);
 }
 
 function spawnNecromancerImpact(x, y) {
@@ -382,12 +397,10 @@ function startSkeletonRenderLoop() {
   skeletonRenderLoopRunning = true;
 
   function loop(now) {
-    const hasSkeletons =
-      state.rebirthUpgrades?.necromancer > 0 &&
-      Array.isArray(state.skeletons) &&
-      state.skeletons.length > 0;
+    const hasNecromancer = state.rebirthUpgrades?.necromancer > 0;
+    const hasSkeletons = Array.isArray(state.skeletons) && state.skeletons.length > 0;
 
-    if (hasSkeletons && now - lastSkeletonRenderAt >= 100) {
+    if (hasNecromancer && hasSkeletons && now - lastSkeletonRenderAt >= 150) {
       renderSkeletons();
       lastSkeletonRenderAt = now;
     }

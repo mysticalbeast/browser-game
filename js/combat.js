@@ -85,27 +85,34 @@ async function performRebirth() {
 }
 
 function triggerDeathEcho(targets, originalDamage) {
-  const level = state.skills.deathEcho || 0;
+  const level = Number(state.skills?.deathEcho || 0);
   if (level <= 0) return;
 
-  const echoMultiplier = (30 + level * 10) / 100;
+  if (state.deathEchoInProgress) return;
+  state.deathEchoInProgress = true;
+
+  const safeTargets = (targets || [])
+    .filter(target => target && target.id)
+    .slice(0, 2);
+
+  if (safeTargets.length <= 0) {
+    state.deathEchoInProgress = false;
+    return;
+  }
+
+  const echoMultiplier = (25 + level * 5) / 100;
   const echoDamage = Math.max(1, Math.floor(originalDamage * echoMultiplier));
 
   setTimeout(() => {
-    targets.forEach(target => {
-      const stillExists = state.monsters.find(m => m.id === target.id);
-      if (!stillExists) return;
+    safeTargets.forEach(target => {
+      const currentTarget = state.monsters.find(m => m.id === target.id);
+      if (!currentTarget) return;
 
-      spawnNecromancerProjectile(target, () => {
-        const currentTarget = state.monsters.find(m => m.id === target.id);
-        if (!currentTarget) return;
-
-        hitMonster(target.id, echoDamage, "necromancer", "heavyMagic");
-      });
+      hitMonster(target.id, echoDamage, "necromancer", "heavyMagic");
     });
 
-    addLog(`☠ Death Echo repeats Dark Nova for ${fmt(echoDamage)} damage.`, "combat");
-  }, 1500);
+    state.deathEchoInProgress = false;
+  }, 1200);
 }
 
 function applyDecay(targetId, totalDamage) {
@@ -235,27 +242,35 @@ function getMaxSkeletons() {
 
 function handleNecromancerSpawn(x, y) {
   if (!(state.rebirthUpgrades?.necromancer > 0)) return;
-  if ((state.skills.graveCalling || 0) <= 0) return;
+  if ((state.skills?.graveCalling || 0) <= 0) return;
 
   if (!state.skeletons) state.skeletons = [];
 
   const now = Date.now();
 
   state.skeletons = state.skeletons.filter(skeleton =>
+    skeleton &&
     Number.isFinite(skeleton.x) &&
     Number.isFinite(skeleton.y) &&
-    skeleton.expiresAt > now
+    Number(skeleton.expiresAt || 0) > now
   );
 
   if (state.skeletons.length >= getMaxSkeletons()) return;
 
-  const spawnChance = 0.25;
+  const spawnChance = 0.18;
   if (Math.random() > spawnChance) return;
 
   spawnSkeleton(x, y);
 
-  const reanimationChance = (state.skills.reanimation || 0) * 0.15;
-  if (state.skeletons.length < getMaxSkeletons() && Math.random() < reanimationChance) {
+  const reanimationChance = Math.min(
+    0.35,
+    Number(state.skills?.reanimation || 0) * 0.06
+  );
+
+  if (
+    state.skeletons.length < getMaxSkeletons() &&
+    Math.random() < reanimationChance
+  ) {
     spawnSkeleton(x + rand(-18, 18), y + rand(-18, 18));
   }
 }
@@ -263,15 +278,20 @@ function handleNecromancerSpawn(x, y) {
 function spawnSkeleton(x, y) {
   if (!state.skeletons) state.skeletons = [];
 
+  state.skeletons = state.skeletons.filter(skeleton =>
+    skeleton &&
+    Number(skeleton.expiresAt || 0) > Date.now()
+  );
+
   if (state.skeletons.length >= getMaxSkeletons()) return;
 
-  const eliteChance = (state.skills.eliteSkeleton || 0) * 0.10;
+  const eliteChance = Number(state.skills?.eliteSkeleton || 0) * 0.10;
   const elite = Math.random() < eliteChance;
 
   const duration = elite ? 30000 : 15000;
 
   const skeleton = {
-    id: Math.random(),
+    id: `skeleton_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     x,
     y,
     elite,
@@ -279,8 +299,6 @@ function spawnSkeleton(x, y) {
   };
 
   state.skeletons.push(skeleton);
-
-  addLog(elite ? "☠ Elite Skeleton raised!" : "💀 A skeleton has been raised!", "system");
 }
 
 function distanceBetween(a, b) {
@@ -1885,7 +1903,7 @@ function getNecromancerTargets() {
 function handleNecromancerAttack(now) {
   if (state.settings?.necromancerAttacks === false) return;
   if (!necromancerUnlocked()) return;
-  if (!state.monsters.length) return;
+  if (!Array.isArray(state.monsters) || state.monsters.length <= 0) return;
 
   if (
     now - (state.lastNecromancerAttack || 0) <
@@ -1896,20 +1914,18 @@ function handleNecromancerAttack(now) {
 
   state.lastNecromancerAttack = now;
 
-  const targets = getNecromancerTargets();
+  const targets = getNecromancerTargets().slice(0, 4);
   if (!targets.length) return;
 
   let damage = necromancerDamage();
-
   damage *= getTotalSummonDamageMultiplier();
   damage = Math.floor(damage);
 
   targets.forEach(target => {
-    spawnNecromancerProjectile(target, () => {
-      const stillExists = state.monsters.find(
-        m => m.id === target.id
-      );
+    if (!target || !target.id) return;
 
+    spawnNecromancerProjectile(target, () => {
+      const stillExists = state.monsters.find(m => m.id === target.id);
       if (!stillExists) return;
 
       hitMonster(
@@ -1919,16 +1935,25 @@ function handleNecromancerAttack(now) {
         "heavyMagic"
       );
 
-      applyDecay(target.id, damage);
+      if (typeof applyDecay === "function") {
+        applyDecay(target.id, damage);
+      }
 
-      handleNecromancerSpawn(
-        stillExists.x,
-        stillExists.y
-      );
+      if (
+        typeof handleNecromancerSpawn === "function" &&
+        (state.skeletons?.length || 0) < getMaxSkeletons()
+      ) {
+        handleNecromancerSpawn(
+          stillExists.x,
+          stillExists.y
+        );
+      }
     });
   });
 
-  triggerDeathEcho(targets, damage);
+  if (typeof triggerDeathEcho === "function") {
+    triggerDeathEcho(targets.slice(0, 2), damage);
+  }
 }
 
 function cleanupSkeletons(now) {

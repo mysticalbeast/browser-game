@@ -5863,12 +5863,23 @@ function renderSkeletons() {
   const arena = document.getElementById("arena");
   if (!arena) return;
 
-  const validSkeletons = (state.skeletons || []).filter(skeleton =>
-    Number.isFinite(skeleton.x) &&
-    Number.isFinite(skeleton.y)
-  );
+  const skeletons = Array.isArray(state.skeletons)
+    ? state.skeletons
+    : [];
 
-  const activeIds = new Set(validSkeletons.map(s => String(s.id)));
+  const validSkeletons = skeletons
+    .filter(skeleton =>
+      skeleton &&
+      Number.isFinite(skeleton.x) &&
+      Number.isFinite(skeleton.y)
+    )
+    .slice(0, getMaxSkeletons());
+
+  state.skeletons = validSkeletons;
+
+  const activeIds = new Set(
+    validSkeletons.map(skeleton => String(skeleton.id))
+  );
 
   document.querySelectorAll(".skeletonSummon").forEach(el => {
     if (!activeIds.has(el.dataset.skeletonId)) {
@@ -5877,7 +5888,13 @@ function renderSkeletons() {
   });
 
   validSkeletons.forEach(skeleton => {
-    let el = document.querySelector(`.skeletonSummon[data-skeleton-id="${skeleton.id}"]`);
+    if (!skeleton.id) {
+      skeleton.id = `skeleton_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    let el = document.querySelector(
+      `.skeletonSummon[data-skeleton-id="${skeleton.id}"]`
+    );
 
     if (!el) {
       el = document.createElement("div");
@@ -5891,9 +5908,9 @@ function renderSkeletons() {
     const isElite = skeleton.elite === true;
     el.className = `skeletonSummon ${isElite ? "eliteSkeletonSummon" : ""}`;
 
-    const radius = getSkeletonAttackRadius(skeleton);
-    el.style.setProperty("--skeleton-radius", `${radius * 2}px`);
+    const radius = Math.min(220, getSkeletonAttackRadius(skeleton));
 
+    el.style.setProperty("--skeleton-radius", `${radius * 2}px`);
     el.style.left = `${skeleton.x}px`;
     el.style.top = `${skeleton.y}px`;
   });
