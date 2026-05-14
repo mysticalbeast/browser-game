@@ -224,20 +224,13 @@ function necromancerDamage() {
   return Math.floor(base * 0.6 * darkNovaBoost * overchannelBoost * boneArmorBoost);
 }
 
-function getNecromancerTargets() {
-  const bonusTargets = state.skills.darkNovaTargets || 0;
-  const maxTargets = 3 + bonusTargets;
-
-  return state.monsters.slice(0, maxTargets);
-}
-
 function getMaxSkeletons() {
   const base = 2;
+  const mastery = Math.floor(Number(state.skills?.skeletonMastery || 0));
 
-  const masteryBonus = Math.floor((state.skills.skeletonMastery || 0) / 2);
-  const extra = state.skills.skeletonMastery || 0;
+  const calculated = base + Math.floor(mastery / 2) + mastery;
 
-  return base + masteryBonus + extra;
+  return Math.min(10, calculated);
 }
 
 function handleNecromancerSpawn(x, y) {
@@ -1883,8 +1876,8 @@ function necromancerUnlocked() {
 }
 
 function getNecromancerTargets() {
-  const bonusTargets = state.skills.darkNovaTargets || 0;
-  const maxTargets = 3 + bonusTargets;
+  const bonusTargets = Math.floor(Number(state.skills?.darkNovaTargets || 0));
+  const maxTargets = Math.min(6, 3 + bonusTargets);
 
   return state.monsters.slice(0, maxTargets);
 }

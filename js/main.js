@@ -285,6 +285,11 @@ function spawnNecromancerProjectile(target, onHit) {
   const arena = document.getElementById("arena");
   const necro = document.getElementById("necromancerVisual");
 
+if (document.querySelectorAll(".necromancerProjectile").length >= 20) {
+  if (typeof onHit === "function") onHit();
+  return;
+}
+
   if (!arena || !necro || !target) {
     onHit();
     return;
@@ -369,14 +374,24 @@ function spawnNecromancerImpact(x, y) {
 // ===== GLOBAL FUNCTIONS =====
 
 let skeletonRenderLoopRunning = false;
+let lastSkeletonRenderAt = 0;
 
 function startSkeletonRenderLoop() {
   if (skeletonRenderLoopRunning) return;
 
   skeletonRenderLoopRunning = true;
 
-  function loop() {
-    renderSkeletons();
+  function loop(now) {
+    const hasSkeletons =
+      state.rebirthUpgrades?.necromancer > 0 &&
+      Array.isArray(state.skeletons) &&
+      state.skeletons.length > 0;
+
+    if (hasSkeletons && now - lastSkeletonRenderAt >= 100) {
+      renderSkeletons();
+      lastSkeletonRenderAt = now;
+    }
+
     requestAnimationFrame(loop);
   }
 
