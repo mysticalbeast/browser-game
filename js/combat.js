@@ -1652,9 +1652,10 @@ if (!unlocked) return;
   addLog(`🌍 Auto-traveled to ${bestZone.name}.`, "system");
 }
 
-function autoAllocateSkills() {
+async function autoAllocateSkills() {
   ensureAutomationToggles();
 
+  if (autoAllocateSkills.inProgress) return;
   if (!state.automationToggles.autoSkills) return;
 
   const unlocked =
@@ -1664,65 +1665,52 @@ function autoAllocateSkills() {
   if (!unlocked) return;
   if ((state.skillPoints || 0) <= 0) return;
 
-  const priority = [
-  // =====================
-  // 1. MINOTAUR → needs 20 points to unlock Spells
-  // =====================
-  "sharpshooter",
-  "powerBolt",
-  "doubleStrike",
-  "tripleStrike",
-  "headshot",
-  "strongerBullets",
+  autoAllocateSkills.inProgress = true;
 
-  // =====================
-  // 2. SPELLS → needs 20 points to unlock Economy
-  // =====================
-  "unlockFireball",
-  "fireballDamage",
-  "fireballCooldown",
+  try {
+    const priority = [
+      "sharpshooter",
+      "powerBolt",
+      "doubleStrike",
+      "tripleStrike",
+      "headshot",
+      "strongerBullets",
 
-  "unlockLightMagic",
-  "lightMagicDamage",
-  "lightMagicCooldown",
+      "unlockFireball",
+      "fireballDamage",
+      "fireballCooldown",
 
-  "unlockHeavyMagic",
-  "heavyMagicDamage",
-  "heavyMagicCooldown",
+      "unlockLightMagic",
+      "lightMagicDamage",
+      "lightMagicCooldown",
 
-  // =====================
-  // 3. ECONOMY → needs 20 points to unlock Necromancer
-  // =====================
-  "deepPockets",
-  "experiencedHunter",
-  "materialistic",
-  "gearingUp",
-  "likeABoss",
-  "lootHungry",
-  "uberDifficulty",
+      "unlockHeavyMagic",
+      "heavyMagicDamage",
+      "heavyMagicCooldown",
 
-  // =====================
-  // 4. NECROMANCER
-  // =====================
-  "graveCalling",
-  "skeletonMastery",
-  "skeletonReach",
-  "walkingDead",
-  "reanimation",
-  "eliteSkeleton",
-  "boneArmor",
+      "deepPockets",
+      "experiencedHunter",
+      "materialistic",
+      "gearingUp",
+      "likeABoss",
+      "lootHungry",
+      "uberDifficulty",
 
-  "darkNovaDamage",
-  "darkNovaTargets",
-  "decay",
-  "deathEcho",
-  "overchannel"
-];
+      "graveCalling",
+      "skeletonMastery",
+      "skeletonReach",
+      "walkingDead",
+      "reanimation",
+      "eliteSkeleton",
+      "boneArmor",
 
-  let spentAny = false;
-  let spentCount = 0;
+      "darkNovaDamage",
+      "darkNovaTargets",
+      "decay",
+      "deathEcho",
+      "overchannel"
+    ];
 
-  while (state.skillPoints > 0) {
     const nextSkillKey = priority.find(key => {
       const skill = Object.values(SKILLS).flat().find(s => s.key === key);
       if (!skill) return false;
@@ -1731,28 +1719,21 @@ function autoAllocateSkills() {
       const max = getSkillMax(skill);
 
       if (current >= max) return false;
-
-      // Important: this allows 0/10 skills to be started automatically.
       if (!canUnlockNode(key)) return false;
 
       return true;
     });
 
-    if (!nextSkillKey) break;
+    if (!nextSkillKey) return;
 
-    clickSkillNode(nextSkillKey);
-    spentAny = true;
-    spentCount++;
-  }
+    await clickSkillNode(nextSkillKey);
 
-  if (spentAny) {
     showFilterNotification(
       "salvage",
-      `⚡ Auto Skill Allocator spent ${spentCount} skill point${spentCount === 1 ? "" : "s"}.`
+      "⚡ Auto Skill Allocator spent 1 skill point."
     );
-
-    updateUI();
-    saveGame();
+  } finally {
+    autoAllocateSkills.inProgress = false;
   }
 }
 
