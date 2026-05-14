@@ -265,6 +265,10 @@ router.post("/:userId", authMiddleware, async (req, res) => {
 
       // Backend-owned materials
       finalSave.materials = existingSave.materials || {};
+	  
+	  // Backend-owned potions
+	  finalSave.potions = existingSave.potions || {};
+	  
       // Backend-owned skills
       finalSave.skills = existingSave.skills || {};
 

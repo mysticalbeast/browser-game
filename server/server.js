@@ -19,6 +19,7 @@ const chestRoutes = require("./routes/chests");
 const offlineRoutes = require("./routes/offline");
 const equipmentRoutes = require("./routes/equipment");
 const rewardsRoutes = require("./routes/rewards");
+const potionRoutes = require("./routes/potions");
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/chests", chestRoutes);
 app.use("/offline", offlineRoutes);
 app.use("/equipment", equipmentRoutes);
 app.use("/rewards", rewardsRoutes);
+app.use("/potions", potionRoutes);
 
 const PORT = process.env.PORT || 3000;
 

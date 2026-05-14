@@ -2784,37 +2784,66 @@ function canCraftPotion(potion) {
   return hasPotionMaterials(potion) && canAddPotionTime(potion);
 }
 
-function craftPotion(potionKey) {
-  const potion = POTIONS.find(p => p.key === potionKey);
-  if (!potion) return;
+async function craftPotion(potionKey) {
+  const token = getAuthToken?.();
 
-  if (!hasPotionMaterials(potion)) {
-    showFilterNotification("sell", `🧪 Not enough essences for ${potion.name}.`);
-    return;
-  }
-
-  if (!canAddPotionTime(potion)) {
+  if (!token) {
     showFilterNotification(
       "sell",
-      `🧪 ${potion.name} cannot exceed the ${getPotionTimeLimitHours()}h active-time limit.`
+      "Login required."
     );
     return;
   }
 
-  Object.entries(potion.costs).forEach(([key, amount]) => {
-    state.materials[key] -= amount;
-  });
+  try {
+    const response = await fetch(
+      `${API_URL}/potions/craft`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          potionKey
+        })
+      }
+    );
 
-  const now = Date.now();
-  const currentUntil = state.potions[potion.activeKey] || 0;
-  state.potions[potion.activeKey] = Math.max(now, currentUntil) + potion.durationMs;
+    const data = await response.json();
 
-  showFilterNotification("salvage", `🧪 Crafted ${potion.name}.`);
+    if (!response.ok || !data?.success) {
+      showFilterNotification(
+        "sell",
+        data?.message || "Craft failed."
+      );
 
-  updateUI();
-  renderCraftingPanel();
-  renderLeftSpellBox();
-  saveGame();
+      return;
+    }
+
+    Object.assign(state, data.save);
+
+    if (typeof normalizeLoadedState === "function") {
+      normalizeLoadedState();
+    }
+
+    showFilterNotification(
+      "salvage",
+      `🧪 Crafted ${potionKey} potion.`
+    );
+
+    updateUI?.();
+    renderCraftingPanel?.();
+    renderLeftSpellBox?.();
+    saveGame?.();
+  } catch (error) {
+    console.warn("Potion craft failed:", error);
+
+    showFilterNotification(
+      "sell",
+      "Potion craft failed."
+    );
+  }
 }
 
 function renderCraftingPanel() {
